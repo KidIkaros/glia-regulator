@@ -1,0 +1,21 @@
+gpu kernel: installing pinned deps
+device: cuda
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<04:38,  1.15it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 360.58it/s]
+[diag 37s] neurons: {15: 64, 19: 64}
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[diag 44s] Q1 raw pooled cosine: document-level 0.9231 | last-64-token 0.9099
+[diag 44s] Q1b reader-output (z) pairwise cosine across documents: 0.9984
+[diag 44s] Q2 gain +0.00: KL 0.00000 loop-token mass 0.00000 (delta +0.00000)
+[diag 45s] Q2 gain +0.25: KL 0.00051 loop-token mass 0.00000 (delta +0.00000)
+[diag 45s] Q2 gain +0.50: KL 0.00251 loop-token mass 0.00000 (delta +0.00000)
+[diag 45s] Q2 gain -0.50: KL 0.00126 loop-token mass 0.00000 (delta -0.00000)
+[diag 45s] Q2 gain -1.00: KL 0.00299 loop-token mass 0.00000 (delta -0.00000)
+[diag 45s] SUMMARY {"status": "complete", "q1_doc_cosine": 0.9231433272361755, "q1_chunk_cosine": 0.9099248647689819, "q1b_reader_z_cosine": 0.9983572959899902, "q2_authority": [{"gain": 0.0, "kl_from_base": 0.0, "loop_token_mass": 2.981787927680557e-09, "loop_mass_delta": 0.0}, {"gain": 0.25, "kl_from_base": 0.0005092353094369173, "loop_token_mass": 3.990881403126423e-09, "loop_mass_delta": 1.0090934754458658e-09}, {"gain": 0.5, "kl_from_base": 0.002511659637093544, "loop_token_mass": 5.477442055479287e-09, "loop_mass_delta": 2.49565412779873e-09}, {"gain": -0.5, "kl_from_base": 0.0012621819041669369, "loop_token_mass": 1.8499490828105536e-09, "loop_mass_delta": -1.1318388448700034e-09}, {"gain": -1.0, "kl_from_base": 0.0029937997460365295, "loop_token_mass": 1.4118379798588876e-09, "loop_mass_delta": -1.5699499478216694e-09}], "base_loop_token_mass": 2.981787927680557e-09}
+/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+  cells[i][c] = re.sub('\\\\\|', '|', cell)
+/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+  text = re.sub(r'_', '\_', text) # Escape underscores in display text
+[NbConvertApp] Converting notebook __script__.ipynb to html
+[NbConvertApp] Writing 1137349 bytes to __results__.html

@@ -54,3 +54,22 @@ those pooled vectors are nearly identical across documents (same prompt shape, s
 model), so the reader has almost no context to be context-dependent WITH -> the head
 saturates at a constant, context-BLIND gate. Fix is architectural (chunk-local
 context -> per-chunk gains), not another knob.
+
+## 2026-11-03 19:0x — diagnostics + lever redesign · quota 28.25/1.75h
+DIAGNOSTIC (kernel glia-diag-v1, 3 pushes, ~0.1h total):
+  Q1  pooled residuals (L4/8/12) pairwise cosine across 12 documents = 0.9231
+      (last-64-token pooling 0.9099) -> the read signal barely varies by document.
+  Q1b READER OUTPUT z pairwise cosine across documents = 0.9984 -> the glial was
+      context-blind BY CONSTRUCTION; the head saturated because the optimum is a
+      constant gate, and a constant gate degenerates the model.
+  Q2  AUTHORITY of an activation gate on the 128 verified loop neurons:
+      gain +0.25 -> KL 0.00051; +0.5 -> 0.00251; -0.5 -> 0.00126; -1.0 -> 0.0030.
+      Even fully zeroing 128 neurons barely moves the next-token distribution.
+      => the activation-gate lever is structurally too weak.
+DESIGN CONSEQUENCE (ADR-0002): use the authors' EXACT edit as the lever and learn only
+its per-token strength. DeltaLever: out -= alpha(t) * (act[t,idx] @ D[:,idx]^T), where
+D = W_edited - W_base for the edited down_proj columns. alpha=0 -> base (the loop),
+alpha=1 -> numerically the authors' edited checkpoint (closed-thinking 11% -> 83%).
+The glial's ONLY learned quantity is WHEN to apply the fix (one scalar per token).
+Kernel glia-lever-check pushed: (A) logit equivalence alpha=1 vs edited checkpoint,
+(B) authority curve KL(alpha), (C) closed-thinking at alpha=0 vs 1 on 6 problems.

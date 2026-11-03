@@ -1,0 +1,36 @@
+gpu kernel: installing pinned deps
+device: cuda
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<03:24,  1.56it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 444.28it/s]
+[diag 32s] neurons: {15: 64, 19: 64}
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[diag 37s] Q1 pairwise cosine: document-level 0.9231 | last-chunk-level 0.9231
+Traceback (most recent call last):
+  File "/tmp/glia_work/src/diagnose_context.py", line 134, in <module>
+    base_p, base_loop = dist_at_probe()
+                        ~~~~~~~~~~~~~^^
+  File "/tmp/glia_work/src/diagnose_context.py", line 130, in dist_at_probe
+    loop_mass = float(p[0, loop_probe[0, 0]].item())
+                      ~^^^^^^^^^^^^^^^^^^^^^
+IndexError: too many indices for tensor of dimension 1
+Traceback (most recent call last):
+  File "/kaggle/src/script.py", line 17, in <module>
+    subprocess.run([sys.executable, os.path.join(root, "src", "diagnose_context.py")],
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                   check=True, env=dict(os.environ, OUT_DIR="/kaggle/working",
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                        PYTHONPATH=os.path.join(root, "src"),
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                        DEADLINE_S="900"))
+                                        ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/usr/bin/python3', '/tmp/glia_work/src/diagnose_context.py']' returned non-zero exit status 1.
+/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+  cells[i][c] = re.sub('\\\\\|', '|', cell)
+/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+  text = re.sub(r'_', '\_', text) # Escape underscores in display text
+[NbConvertApp] Converting notebook __script__.ipynb to html
+[NbConvertApp] Writing 1136077 bytes to __results__.html
