@@ -1,0 +1,21 @@
+gpu kernel: installing pinned deps
+device: cuda 2
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<03:27,  1.54it/s]Loading weights:  90%|âââââââââ | 287/320 [00:00<00:00, 505.91it/s]Loading weights: 100%|ââââââââââ| 320/320 [00:00<00:00, 394.75it/s]
+[attr 37s] model loaded
+[attr 37s] warmup forward
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[attr 41s] warmup done
+[attr 43s] r_L: {15: 4.322307109832764, 19: 7.849076271057129, 21: 9.588664054870605, 23: 9.581777572631836}
+[attr 52s] GATE 1 layer 15: top-10 overlap with known = 2/10
+[attr 58s] GATE 1 layer 19: top-10 overlap with known = 3/10
+[attr 58s] GATE 1: PASS | variant: autograd
+[attr 60s] drift attribution layer 19 done
+[attr 62s] drift attribution layer 21 done
+[attr 63s] drift attribution layer 23 done
+[attr 63s] candidates: [(19, 18), (19, 22), (19, 10), (19, 16), (19, 12), (19, 8), (19, 20), (19, 4), (19, 23), (19, 5), (19, 15), (19, 13), (19, 7), (19, 17), (19, 3), (19, 19), (19, 9), (19, 21), (19, 1), (19, 11), (19, 0), (19, 2), (19, 6), (19, 14)]
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[attr 137s] unsteered drift rate: 0.00
+[attr 358s] random control drift rates: [0.0, 0.0, 0.0]

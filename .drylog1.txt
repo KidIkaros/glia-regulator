@@ -1,0 +1,23 @@
+cpu kernel: installing pinned deps
+device: cpu
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:01<05:21,  1.01s/it]Loading weights: 100%|██████████| 320/320 [00:01<00:00, 312.55it/s]
+[dryrun 49s] model loaded Qwen3_5ForCausalLM
+[dryrun 49s] down_proj(15) path: ['model.layers.15.mlp.down_proj']
+[dryrun 49s] mlp.down_proj count (layers with FFN): 24
+[dryrun 49s] d_model: 1024 intermediate: 3584
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[dryrun 50s] base forward done, logits (1, 8, 248320)
+[dryrun 50s] glial installed; handles: 6
+[dryrun 51s] IDENTITY at init: True | max logit diff: 0.0
+[dryrun 52s] HOOKS LIVE: max logit delta after nudging heads: 0.9675755500793457
+[dryrun 52s] gains |max|: {15: 0.2419152706861496, 19: 0.23136204481124878} | sigma bound: 0.5
+[dryrun 52s] glial state norm: 0.5927107930183411
+[dryrun 52s] RESULT {"status": "ok", "model_class": "Qwen3_5ForCausalLM", "down_proj_path": "model.layers.15.mlp.down_proj", "d_model": 1024, "intermediate": 3584, "identity_at_init": true, "max_diff_at_init": 0.0, "hooks_live": true, "max_logit_delta_after_nudge": 0.9675755500793457, "gain_abs_max": {"15": 0.2419152706861496, "19": 0.23136204481124878}, "sigma": 0.5, "state_norm": 0.5927107930183411, "elapsed_s": 51.84892010688782}
+/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+  cells[i][c] = re.sub('\\\\\|', '|', cell)
+/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+  text = re.sub(r'_', '\_', text) # Escape underscores in display text
+[NbConvertApp] Converting notebook __script__.ipynb to html
+[NbConvertApp] Writing 291529 bytes to __results__.html

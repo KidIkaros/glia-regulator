@@ -1,0 +1,22 @@
+cpu kernel: installing pinned deps
+device: cpu
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:01<09:18,  1.75s/it]Loading weights: 100%|██████████| 320/320 [00:01<00:00, 180.08it/s]
+Generating train split:   0%|          | 0/7473 [00:00<?, ? examples/s]Generating train split:  13%|█▎        | 1000/7473 [00:00<00:01, 3771.86 examples/s]Generating train split: 100%|██████████| 7473/7473 [00:00<00:00, 26451.26 examples/s]
+Generating test split:   0%|          | 0/1319 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 1319/1319 [00:00<00:00, 79358.04 examples/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+/tmp/glia_work/src/train_glial.py:130: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  gmax = max(float(g.abs().max()) for g in field._gains.values()) if field._gains else 0.0
+[train 16s] step 0: loss=0.898 syco=0.000 loop=1.795 kl=0.0000 grads={'loop': 0.000945495383348316, 'syco': 0.000945495383348316} |g|=0.0000
+[train 33s] step 1: loss=1.121 syco=0.000 loop=2.241 kl=0.0000 grads={'loop': 0.002448577433824539, 'syco': 0.002448577433824539} |g|=0.0103
+[train 49s] step 2: loss=2.176 syco=1.282 loop=1.787 kl=0.0000 grads={'loop': 0.002197450026869774, 'syco': 0.002197450026869774} |g|=0.0261
+[train 49s] saved glial_state.pt
+SMOKE OK
+/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+  cells[i][c] = re.sub('\\\\\|', '|', cell)
+/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+  text = re.sub(r'_', '\_', text) # Escape underscores in display text
+[NbConvertApp] Converting notebook __script__.ipynb to html
+[NbConvertApp] Writing 300968 bytes to __results__.html

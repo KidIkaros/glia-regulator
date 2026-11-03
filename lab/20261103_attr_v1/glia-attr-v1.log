@@ -1,0 +1,37 @@
+[{"stream_name":"stdout","time":0.691895034,"data":"gpu kernel: installing pinned deps\n"}
+,{"stream_name":"stdout","time":20.784416587,"data":"device: cuda 2\n"}
+,{"stream_name":"stderr","time":30.892853724,"data":"Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.\n"}
+,{"stream_name":"stderr","time":52.459342852,"data":"\rLoading weights:   0%|          | 0/320 [00:00\u003c?, ?it/s]\rLoading weights:   0%|          | 1/320 [00:00\u003c04:00,  1.32it/s]\rLoading weights: 100%|██████████| 320/320 [00:00\u003c00:00, 403.96it/s]\n"}
+,{"stream_name":"stdout","time":53.975941723,"data":"[attr 32s] model loaded\n"}
+,{"stream_name":"stdout","time":53.975992172,"data":"[attr 32s] warmup forward\n"}
+,{"stream_name":"stderr","time":54.319625077,"data":"[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.\n"}
+,{"stream_name":"stderr","time":55.092601283,"data":"[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.\n"}
+,{"stream_name":"stdout","time":55.468315341,"data":"[attr 33s] warmup done\n"}
+,{"stream_name":"stdout","time":59.764479079,"data":"[attr 37s] r_L: {15: 4.322238445281982, 19: 7.8496575355529785, 21: 9.588136672973633, 23: 9.58221435546875}\n"}
+,{"stream_name":"stdout","time":68.157716402,"data":"[attr 46s] GATE 1 layer 15: top-10 overlap with known = 2/10\n"}
+,{"stream_name":"stdout","time":75.013165216,"data":"[attr 53s] GATE 1 layer 19: top-10 overlap with known = 0/10\n"}
+,{"stream_name":"stdout","time":75.013210889,"data":"[attr 53s] GATE 1: FAIL | variant: autograd\n"}
+,{"stream_name":"stdout","time":75.013215844,"data":"[attr 53s] GATE 1 failed on autograd variant - trying finite difference on 200 candidates\n"}
+,{"stream_name":"stdout","time":99.947573428,"data":"[attr 78s] finite-diff GATE 1 layer 15: overlap 1/10\n"}
+,{"stream_name":"stdout","time":124.853811897,"data":"[attr 103s] finite-diff GATE 1 layer 19: overlap 0/10\n"}
+,{"stream_name":"stdout","time":124.85386515,"data":"[attr 103s] GATE 1 (finite_diff): FAIL\n"}
+,{"stream_name":"stderr","time":124.854337151,"data":"GATE 1 failed - identification pipeline not validated, aborting\n"}
+,{"stream_name":"stderr","time":127.854461269,"data":"Traceback (most recent call last):\n"}
+,{"stream_name":"stderr","time":127.855223639,"data":"  File \"/kaggle/src/script.py\", line 18, in \u003cmodule\u003e\n"}
+,{"stream_name":"stderr","time":127.855239685,"data":"    subprocess.run([sys.executable, os.path.join(root, \"src\", \"driver_attr.py\")],\n"}
+,{"stream_name":"stderr","time":127.855245511,"data":"    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":127.855250032,"data":"                   check=True, env=dict(os.environ, OUT_DIR=\"/kaggle/working\",\n"}
+,{"stream_name":"stderr","time":127.855254608,"data":"                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":127.855264442,"data":"                                        PYTHONPATH=os.path.join(root, \"src\")))\n"}
+,{"stream_name":"stderr","time":127.855268042,"data":"                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"}
+,{"stream_name":"stderr","time":127.85527095,"data":"  File \"/usr/lib/python3.13/subprocess.py\", line 578, in run\n"}
+,{"stream_name":"stderr","time":127.855273877,"data":"    raise CalledProcessError(retcode, process.args,\n"}
+,{"stream_name":"stderr","time":127.855306671,"data":"                             output=stdout, stderr=stderr)\n"}
+,{"stream_name":"stderr","time":127.855311552,"data":"subprocess.CalledProcessError: Command '['/usr/bin/python3', '/tmp/glia_work/src/driver_attr.py']' returned non-zero exit status 1.\n"}
+,{"stream_name":"stderr","time":130.152905489,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":130.152935896,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":130.356724229,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":130.356752456,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":131.07713471,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":131.960378751,"data":"[NbConvertApp] Writing 1142860 bytes to __results__.html\n"}
+]

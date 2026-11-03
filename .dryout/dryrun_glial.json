@@ -1,0 +1,18 @@
+{
+ "status": "ok",
+ "model_class": "Qwen3_5ForCausalLM",
+ "down_proj_path": "model.layers.15.mlp.down_proj",
+ "d_model": 1024,
+ "intermediate": 3584,
+ "identity_at_init": true,
+ "max_diff_at_init": 0.0,
+ "hooks_live": true,
+ "max_logit_delta_after_nudge": 0.9675755500793457,
+ "gain_abs_max": {
+  "15": 0.2419152706861496,
+  "19": 0.23136204481124878
+ },
+ "sigma": 0.5,
+ "state_norm": 0.5927107930183411,
+ "elapsed_s": 51.84892010688782
+}
