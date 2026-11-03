@@ -5,7 +5,7 @@ to us exactly: the authors' released checkpoint differs from the base checkpoint
 64 down_proj columns of L15 and 64 of L19. We extract that delta D[L] (shape
 [1024, 64]) at runtime and apply
 
-    out[t] -= alpha(t) * ( act[t, idx] @ D[L][:, idx]^T )
+    out[t] += alpha(t) * ( act[t, idx] @ D[L][:, idx]^T )
 
 where alpha(t) is a scalar produced per token by the glial's slow-state reader.
 
@@ -54,9 +54,12 @@ class DeltaLever:
         if alpha == 0.0:
             return None
         out = output[0] if isinstance(output, tuple) else output
+        # D = W_edited - W_base already carries the edit's SIGN (the edit REMOVES the
+        # loop direction, so D is negative along d_hat). Therefore the correction is
+        # ADDED, not subtracted. Subtracting it applies the loop direction twice.
         corr = torch.einsum("btn,on->bto", self.a, self.delta)     # [B,T,1024]
         corr = corr * alpha
-        new = (out.float() - corr).to(out.dtype)
+        new = (out.float() + corr).to(out.dtype)
         if isinstance(output, tuple):
             return (new,) + tuple(output[1:])
         return new

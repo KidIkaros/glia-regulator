@@ -73,3 +73,17 @@ alpha=1 -> numerically the authors' edited checkpoint (closed-thinking 11% -> 83
 The glial's ONLY learned quantity is WHEN to apply the fix (one scalar per token).
 Kernel glia-lever-check pushed: (A) logit equivalence alpha=1 vs edited checkpoint,
 (B) authority curve KL(alpha), (C) closed-thinking at alpha=0 vs 1 on 6 problems.
+
+## 2026-11-03 19:5x — sign bug in the lever; Kaggle OAuth refresh token expired
+- Diff census (kernel glia-diff-census): the authors' checkpoint differs from the base
+  in EXACTLY 2 tensors (layers.15/19.mlp.down_proj.weight, ~64 columns each). Our
+  independently diagnosed neurons overlap their edited columns 62/64 (L15) and 63/64
+  (L19) -> an independent replication of their neuron set.
+- Logit equivalence FAILED twice: first because the kernel ran the checkpoint delta at
+  alpha=6 (the delta already encodes the full 6x edit -> applied 7x over); then, after
+  fixing that, because the lever SUBTRACTED D = W_edited - W_base while D already
+  carries the edit's sign (the edit REMOVES the loop direction) -> the lever applied
+  the loop direction twice. Fixed: the correction is ADDED (src/lever.py).
+- Kaggle CLI stopped authenticating mid-session: the OAuth access token expired
+  (23:54Z) and the stored refresh token no longer refreshes (401 on every call).
+  scripts/kaggle_refresh.py + scripts/kg.py written; a browser re-login is needed.

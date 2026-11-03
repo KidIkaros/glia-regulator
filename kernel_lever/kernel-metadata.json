@@ -1,6 +1,6 @@
 {
- "id": "mauricew/glia-lever-check",
- "title": "glia-lever-check",
+ "id": "mauricew/glia-diff-census",
+ "title": "glia-diff-census",
  "code_file": "main.py",
  "language": "python",
  "kernel_type": "script",
