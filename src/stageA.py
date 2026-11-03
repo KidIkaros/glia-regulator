@@ -68,7 +68,7 @@ try:  # ground truth npys embedded next to this file
 except Exception as e:
     log("gt npy load failed, using first-64:", e)
 
-cfg = GlialConfig(behaviors=("loop",), read_layers=(4, 8, 12), sigma=0.2)
+cfg = GlialConfig(behaviors=("loop",), read_layers=(4, 8, 12), sigma=0.5, temp=2.0)
 field, handles = install(model, cfg, neuron_idx, inter=inter, d_model=d_model)
 field = field.to(next(model.parameters()).device)   # the field must share the model's device
 log("glial field device:", next(field.parameters()).device)
@@ -122,8 +122,8 @@ if not identical:
 field.active_heads = set()
 
 # ---------------- TRAIN ----------------
-opt = torch.optim.Adam(field.parameters(), lr=5e-4)
-CLIP_NORM = 1.0
+opt = torch.optim.Adam(field.parameters(), lr=1e-3)
+CLIP_NORM = 0.5
 kl_texts = ["The river runs past the old mill and into the valley where the fields are green.",
             "Write a short note thanking the team.",
             "Summarize why the sky is blue in two sentences."]
@@ -132,9 +132,7 @@ for epoch in range(EPOCHS):
     for p in pairs:
         field.active_heads = {"loop"}
         field.reset_state()
-        comp = p["healthy_completion"]
-        cut = comp.rfind("boxed")
-        target = comp[max(0, cut - 100):] if cut > 0 else comp[-400:]
+        target = p["healthy_completion"][-6000:]      # thinking tail + final answer
         ids = encode_doc(p["problem"], target)
         opt.zero_grad(set_to_none=True)
         doc_loss = 0.0
@@ -163,6 +161,13 @@ json.dump({b: float(h.weight.abs().max()) for b, h in field.heads.items()},
           open(os.path.join(OUT, "glial_heads_absmax.json"), "w"))
 torch.save(field.state_dict(), os.path.join(OUT, "glial_state.pt"))
 log("saved glial_state.pt")
+train_gain = float(field.last_gain_abs)
+if train_gain > 0.9 * cfg.sigma:
+    json.dump(dict(status="saturated", mean_gain=train_gain, sigma=cfg.sigma,
+                   note="head pinned at the bound -> regulator degenerate; eval skipped"),
+              open(os.path.join(OUT, "meta_stageA.json"), "w"), indent=1)
+    log("SATURATION GUARD: mean|gain|=%.4f vs sigma=%.2f -> skipping eval" % (train_gain, cfg.sigma))
+    raise SystemExit("saturated gains - no eval (quota preserved)")
 
 # ---------------- EVAL: 18 paired problems, glial ACTIVE ----------------
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -23,6 +23,7 @@ class GlialConfig:
     neurons_per_layer: int = 64              # 0 = all neurons
     hidden: int = 256                        # glial field width
     sigma: float = 0.5                       # max |gain|
+    temp: float = 2.0                        # head temperature (anti-saturation)
     decay: float = 0.9                       # slow state per chunk
     chunk: int = 64                          # tokens per slow-state step
     behaviors: tuple = ("loop", "syco")
@@ -68,12 +69,12 @@ class GlialField(nn.Module):
         x = torch.cat([self._buf[l] for l in cfg.read_layers], dim=-1)   # [B, k*d]
         h = self.reader(x)
         self._state = h if self._state is None else cfg.decay * self._state + h
-        z = self.state_proj(torch.tanh(self._state))
+        z = self.state_proj(torch.tanh(self._state)) / (self.cfg.hidden ** 0.5)
         acc = {}
         for b in cfg.behaviors:
             if b not in self.active_heads:
                 continue
-            g = torch.tanh(self.heads[b](z)) * cfg.sigma            # [B, sum n]
+            g = torch.tanh(self.heads[b](z) / cfg.temp) * cfg.sigma    # [B, sum n]
             off = 0
             for l in cfg.target_layers:
                 n = self.n_neurons[l]

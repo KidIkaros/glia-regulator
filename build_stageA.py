@@ -33,7 +33,9 @@ print("device:", "cuda" if torch.cuda.is_available() else "cpu", flush=True)
 
 subprocess.run([sys.executable, os.path.join(root, "src", "stageA.py")],
                check=True, env=dict(os.environ, OUT_DIR="/kaggle/working",
-                                    PYTHONPATH=os.path.join(root, "src")))
+                                    PYTHONPATH=os.path.join(root, "src"),
+                                    DEADLINE_S="2400", EVAL_MAX_NEW="8192",
+                                    EPOCHS="6"))
 '''
 
 src = MAIN.replace("__PAYLOAD__", repr(payload))

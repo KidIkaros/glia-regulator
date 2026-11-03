@@ -1,0 +1,48 @@
+gpu kernel: installing pinned deps
+device: cuda
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<03:45,  1.42it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 444.90it/s]
+[stageA 36s] model loaded
+[stageA 36s] using ground-truth neuron indices
+[stageA 36s] glial field device: cuda:0
+[stageA 36s] glial installed; trainable params: 951168
+[stageA 36s] paired problems: 18 | base-model looped: 16
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[stageA 41s] GATE 2 identity at init: True
+/tmp/glia_work/src/glial.py:84: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+  self.last_gain_abs = float(torch.cat([v.flatten() for v in acc.values()]).abs().mean()) \
+[stageA 52s] epoch 0: first_doc_loss=10.398 last_doc_loss=13.656 mean|gain|=0.07860 max|head_w|=0.0092
+[stageA 61s] epoch 1: first_doc_loss=10.398 last_doc_loss=13.535 mean|gain|=0.18673 max|head_w|=0.0153
+[stageA 71s] epoch 2: first_doc_loss=10.398 last_doc_loss=13.530 mean|gain|=0.19729 max|head_w|=0.0165
+[stageA 81s] epoch 3: first_doc_loss=10.398 last_doc_loss=13.530 mean|gain|=0.19788 max|head_w|=0.0167
+[stageA 90s] epoch 4: first_doc_loss=10.398 last_doc_loss=13.529 mean|gain|=0.19744 max|head_w|=0.0167
+[stageA 100s] epoch 5: first_doc_loss=10.398 last_doc_loss=13.528 mean|gain|=0.19733 max|head_w|=0.0167
+[stageA 110s] epoch 6: first_doc_loss=10.398 last_doc_loss=13.528 mean|gain|=0.19814 max|head_w|=0.0167
+[stageA 120s] epoch 7: first_doc_loss=10.398 last_doc_loss=13.528 mean|gain|=0.19835 max|head_w|=0.0167
+[stageA 120s] saved glial_state.pt
+[stageA 120s] SATURATION GUARD: mean|gain|=0.1984 vs sigma=0.20 -> skipping eval
+saturated gains - no eval (quota preserved)
+Traceback (most recent call last):
+  File "/kaggle/src/script.py", line 17, in <module>
+    subprocess.run([sys.executable, os.path.join(root, "src", "stageA.py")],
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                   check=True, env=dict(os.environ, OUT_DIR="/kaggle/working",
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                        PYTHONPATH=os.path.join(root, "src"),
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                        DEADLINE_S="3300", EVAL_MAX_NEW="16384",
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                        EPOCHS="8"))
+                                        ^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/usr/bin/python3', '/tmp/glia_work/src/stageA.py']' returned non-zero exit status 1.
+/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+  cells[i][c] = re.sub('\\\\\|', '|', cell)
+/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+  text = re.sub(r'_', '\_', text) # Escape underscores in display text
+[NbConvertApp] Converting notebook __script__.ipynb to html
+[NbConvertApp] Writing 1148275 bytes to __results__.html

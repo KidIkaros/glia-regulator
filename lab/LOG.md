@@ -41,3 +41,16 @@ Ticket T5. Fix: payload-path lookup moved to the payload ROOT (v1 died on
 FileNotFoundError s1_pairs.json). Added tests/test_payload_layout.py, proven RED by
 reverting the fix and GREEN after restore — this failure class can no longer reach a
 GPU session. Tickets T1-T7 and ADR-0001 committed (git 10b0c6f).
+
+## 2026-11-03 18:2x — glia-stageA v2 (anti-saturation attempt) · quota 28.19/1.81h
+Optimization fix (sigma 0.5, head temperature 2.0, normalized z, lr 1e-3, clip 0.5,
+target = healthy completion's last 6000 chars incl. thinking tail, 6 epochs).
+Result: GATE 2 identity PASS; loss moved slightly (last-doc 79.33 -> 74.50) but the
+first-doc loss stayed EXACTLY constant (55.440 every epoch); mean|gain| climbed
+0.129 -> 0.4957 and pinned at the bound (sigma=0.50) by epoch 5; SATURATION GUARD
+fired and skipped the eval (quota preserved, ~2 min cost).
+DIAGNOSIS (to be tested): the glial reads MEAN-POOLED residuals over a whole document;
+those pooled vectors are nearly identical across documents (same prompt shape, same
+model), so the reader has almost no context to be context-dependent WITH -> the head
+saturates at a constant, context-BLIND gate. Fix is architectural (chunk-local
+context -> per-chunk gains), not another knob.
