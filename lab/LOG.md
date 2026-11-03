@@ -35,3 +35,9 @@ identification failed — recorded as negative result). Train loop head only (3 
 18 paired problems at paper sampling, selectivity via per-prompt mean |gain|, knockout on
 6 problems (expect collapse to <=25% closed). Pre-registered bands: SUCCESS = closed
 >= 70% (i.e. >=70% of static edit's 83% effect), knockout <= 25% closed.
+
+## 2026-11-03 16:4x — Session B v2 launch (glia-stageA-v1 v2) · quota 27.07/2.93h
+Ticket T5. Fix: payload-path lookup moved to the payload ROOT (v1 died on
+FileNotFoundError s1_pairs.json). Added tests/test_payload_layout.py, proven RED by
+reverting the fix and GREEN after restore — this failure class can no longer reach a
+GPU session. Tickets T1-T7 and ADR-0001 committed (git 10b0c6f).

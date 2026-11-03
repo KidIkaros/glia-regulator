@@ -91,7 +91,7 @@ class GlialField(nn.Module):
         if g is None:
             return act
         idx = self.neuron_idx[layer]
-        scale = 1.0 + g.unsqueeze(1)                    # [B, 1, n]
+        scale = (1.0 + g.unsqueeze(1)).to(act.dtype)    # [B, 1, n], dtype-matched
         act = act.clone()
         act[:, :, idx] = act[:, :, idx] * scale
         return act
@@ -113,6 +113,10 @@ def install(model, cfg: GlialConfig, neuron_idx: dict, inter: int, d_model: int)
     """
     n_neurons = {l: len(neuron_idx[l]) for l in cfg.target_layers}
     field = GlialField(cfg, d_model, inter, n_neurons, neuron_idx)
+    try:
+        field = field.to(next(model.parameters()).device)
+    except StopIteration:
+        pass
     handles = []
     for l in cfg.read_layers:
         layer = _resolve(model, f".layers.{l}")[1]

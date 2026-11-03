@@ -1,0 +1,3 @@
+.stageAlog*.txt
+*.log
+kernel*/__pycache__/

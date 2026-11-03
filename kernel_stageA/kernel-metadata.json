@@ -1,6 +1,6 @@
 {
- "id": "mauricew/glia-stageA-test",
- "title": "glia-stageA-test",
+ "id": "mauricew/glia-stageA-v1",
+ "title": "glia-stageA-v1",
  "code_file": "main.py",
  "language": "python",
  "kernel_type": "script",

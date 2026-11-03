@@ -25,7 +25,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.environ.get("OUT_DIR", "/kaggle/working")
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen3.5-0.8B")
 DEADLINE = float(os.environ.get("DEADLINE_S", "4600"))
-EPOCHS = int(os.environ.get("EPOCHS", "3"))
+EPOCHS = int(os.environ.get("EPOCHS", "8"))
 MAX_DOC_TOKENS = int(os.environ.get("MAX_DOC_TOKENS", "2048"))
 SEG = 512
 EVAL_MAX_NEW = int(os.environ.get("EVAL_MAX_NEW", "16384"))
@@ -68,19 +68,27 @@ try:  # ground truth npys embedded next to this file
 except Exception as e:
     log("gt npy load failed, using first-64:", e)
 
-cfg = GlialConfig(behaviors=("loop",), read_layers=(4, 8, 12))
+cfg = GlialConfig(behaviors=("loop",), read_layers=(4, 8, 12), sigma=0.2)
 field, handles = install(model, cfg, neuron_idx, inter=inter, d_model=d_model)
+field = field.to(next(model.parameters()).device)   # the field must share the model's device
+log("glial field device:", next(field.parameters()).device)
 log("glial installed; trainable params:",
     sum(p.numel() for p in field.parameters() if p.requires_grad))
 
-pairs = json.load(open(os.path.join(ROOT, "s1_pairs.json")))
+_data = json.load(open(os.path.join(ROOT, "s1_pairs.json")))
+pairs = _data["pairs"] if isinstance(_data, dict) else _data
+assert isinstance(pairs, list) and pairs and isinstance(pairs[0], dict), "s1_pairs.json shape"
 for p in pairs:
-    p["s1_looped"] = "</think>" not in p["healthy_completion"]
-log("paired problems:", len(pairs), "looped in s1:", sum(p["s1_looped"] for p in pairs))
+    p["s1_looped"] = p.get("base_looped", False)
+log("paired problems:", len(pairs), "| base-model looped:", sum(p["s1_looped"] for p in pairs))
+
+
+MATH_INSTR = "\nPlease reason step by step, and put your final answer within \\boxed{}."
 
 
 def encode_doc(prompt, completion=None, max_tokens=MAX_DOC_TOKENS):
-    p = tok.apply_chat_template([{"role": "user", "content": prompt}], tokenize=False,
+    p = tok.apply_chat_template(
+        [{"role": "user", "content": prompt + MATH_INSTR}], tokenize=False,
                                 add_generation_prompt=True, enable_thinking=True)
     ids = tok(p + (completion or ""), return_tensors="pt", truncation=True,
               max_length=max_tokens).input_ids.cuda()
@@ -114,7 +122,8 @@ if not identical:
 field.active_heads = set()
 
 # ---------------- TRAIN ----------------
-opt = torch.optim.Adam(field.parameters(), lr=1e-3)
+opt = torch.optim.Adam(field.parameters(), lr=5e-4)
+CLIP_NORM = 1.0
 kl_texts = ["The river runs past the old mill and into the valley where the fields are green.",
             "Write a short note thanking the team.",
             "Summarize why the sky is blue in two sentences."]
@@ -123,7 +132,10 @@ for epoch in range(EPOCHS):
     for p in pairs:
         field.active_heads = {"loop"}
         field.reset_state()
-        ids = encode_doc(p["problem"], p["healthy_completion"])
+        comp = p["healthy_completion"]
+        cut = comp.rfind("boxed")
+        target = comp[max(0, cut - 100):] if cut > 0 else comp[-400:]
+        ids = encode_doc(p["problem"], target)
         opt.zero_grad(set_to_none=True)
         doc_loss = 0.0
         for s in range(0, ids.shape[1] - 1, SEG):
@@ -131,18 +143,21 @@ for epoch in range(EPOCHS):
             seg_ids = ids[:, s:e]
             if seg_ids.shape[1] < 2:
                 continue
-            field.reset_state()          # state carries via chunks inside a segment only in v1;
-            with torch.no_grad():
-                base_ref_l = None        # KL computed separately (cheaper)
+            field.reset_state()
             logits = model(seg_ids, logits_to_keep=seg_ids.shape[1] - 1).logits
             tgt = seg_ids[0, 1:]
             lp = torch.log_softmax(logits[0].float(), -1)
             nll = -lp.gather(1, tgt[:, None]).squeeze(1).mean()
             doc_loss += float(nll)
             nll.backward()
+        torch.nn.utils.clip_grad_norm_(field.parameters(), CLIP_NORM)
         opt.step()
         step += 1
-    log(f"epoch {epoch}: last doc_loss={doc_loss:.3f}")
+        if step == 1:
+            first_loss = doc_loss
+    hw = max(float(h.weight.abs().max()) for h in field.heads.values())
+    log(f"epoch {epoch}: first_doc_loss={first_loss:.3f} last_doc_loss={doc_loss:.3f} "
+        f"mean|gain|={field.last_gain_abs:.5f} max|head_w|={hw:.4f}")
 
 json.dump({b: float(h.weight.abs().max()) for b, h in field.heads.items()},
           open(os.path.join(OUT, "glial_heads_absmax.json"), "w"))
@@ -173,7 +188,8 @@ class PresencePenaltyLP(LogitsProcessor):
 
 @torch.no_grad()
 def gen_batch(prompts):
-    texts = [tok.apply_chat_template([{"role": "user", "content": p}], tokenize=False,
+    texts = [tok.apply_chat_template(
+        [{"role": "user", "content": p + MATH_INSTR}], tokenize=False,
                                      add_generation_prompt=True, enable_thinking=True)
              for p in prompts]
     enc = tok(texts, return_tensors="pt", padding=True)
@@ -191,7 +207,7 @@ for i, p in enumerate(pairs):
     field.active_heads = {"loop"}
     field.reset_state()
     t_gen = time.time()
-    gen_ids = gen_batch([p])[0]
+    gen_ids = gen_batch([p["problem"]])[0]
     text = tok.decode(gen_ids, skip_special_tokens=True)
     rec = dict(id=p["id"], n_gen=len(gen_ids.tolist()),
                closed_thinking=bool("</think>" in text), output=text,
@@ -219,7 +235,7 @@ field.active_heads = set()
 ko = []
 for p in pairs[:6]:
     field.reset_state()
-    gen_ids = gen_batch([p])[0]
+    gen_ids = gen_batch([p["problem"]])[0]
     text = tok.decode(gen_ids, skip_special_tokens=True)
     ko.append(bool("</think>" in text))
 ko_closed = sum(ko) / len(ko)

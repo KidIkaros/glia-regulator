@@ -13,6 +13,7 @@ Run:  python3 tests/test_payload_layout.py   (exit 0 = pass)
 """
 import ast
 import base64
+import json
 import os
 import re
 import sys
@@ -67,4 +68,13 @@ for fname in reads:
     assert ok, (f"PATH BUG: {fname} is not joined with the payload ROOT expression; "
                 f"it must read os.path.join(ROOT, \"{fname}\")")
 
-print("PASS: every referenced payload file exists at the root the driver resolves it to")
+# 3. payload JSON shape matches what the driver assumes
+data = json.load(open(os.path.join(root, "s1_pairs.json")))
+assert isinstance(data, dict) and isinstance(data.get("pairs"), list), \
+    "s1_pairs.json must be {\"pairs\": [...]}"
+assert data["pairs"] and isinstance(data["pairs"][0], dict), "pairs entries must be dicts"
+for key in ("id", "problem", "healthy_completion"):
+    assert key in data["pairs"][0], f"pairs entries missing {key!r}"
+
+print("PASS: every referenced payload file exists at the root the driver resolves it to, "
+      "and payload JSON shapes match the driver's assumptions")
