@@ -244,3 +244,14 @@ Result (128-token generation, 18 labelled problems, 16 loopers + 2 healthy):
 => also: the CPU route cannot run this (two fp32 checkpoints OOM-killed the process
    twice, exit 137 - torch's allocator retains the first copy, so the base is loaded
    exactly once now). 18 x 128 tokens takes ~15 min on CPU vs ~1 min on a T4.
+
+## 2026-11-04 16:45-17:05 — the lens toolkit needs Ampere-class hardware (hardware verdict)
+neuron-lens ships hand-written Triton kernels for its DeltaNet transport (~500 lines,
+neuron_lens/kernels.py). They need 96 KB of shared memory; the T4 (sm_75) hardware limit
+is 64 KB -> OutOfResources at kernel launch. TORCHDYNAMO_DISABLE removes the
+torch.compile layer (the first failure) and exposes the direct launches (the second).
+Consequence: EVERY free GPU route fails identically - Colab T4 (this tier rejects
+H100/A100), Kaggle T4x2 and P100 (same or older arch). The lens fits REQUIRE sm_80+.
+The one qualifying machine on this account: the Modal H200 (sm_90, 228 KB shared).
+CPU is ruled out three times over (2 OOM kills, one 40-min timeout without finishing
+2 documents). The fork phase needs no neuron-lens code, so it proceeds on T4 in parallel.
