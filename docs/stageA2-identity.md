@@ -88,3 +88,28 @@ also speed: 18 x 128 tokens took ~15 min on CPU vs ~1 min on a T4).
 * The capability panel is unaffected.
 * The trajectory-feature run proposed earlier is folded INTO step 5 (same rollouts now
   store their text and the activations), so it is not a separate experiment any more.
+
+
+## Related work watch (2026-11-04)
+
+**qwentensor** (Bobliuuu/qwentensor, 9 hours old, built with Claude on qwenTPU):
+compiles a quantized (5-bit) PyTorch network into a prompt-written program that runs
+INSIDE Qwen3.5 - DeltaNet rows as RAM, tokens as the trace, host only runs argmax;
+demonstrated on 0.8B (our exact model), 2B, 4B; bit-exact vs a numpy golden on 540
+sklearn digits; real-model runs on A100 for the unpaged nets (paged/weight-streaming is
+CPU-simulator only).
+
+Relevance to us - honest split:
+* NOT a read tool. It does not advance the identity foothold; Stage A2 proceeds.
+* It IS the proof-of-concept for our weight-side fallback: if Stage A2 finds no
+  activation-level signature, the fallback is control that lives in the weights - and
+  qwentensor demonstrates arbitrary integer circuits executing inside this model family.
+  The glial taken literally: the regulator (alpha(t)) compiled to run in-model, the model
+  carrying its own loop detector instead of an external hook.
+* Mechanical reference: "DeltaNet rows as RAM" documents the exact machinery in our
+  target layers, already bit-exactly manipulated on 0.8B by someone else.
+* Limits to respect: 5-bit ints, ~45-column machines, a page of a small MLP costs ~142
+  tokens; a reader consuming 128 float channels is a major lift. Endgame bookmark, not a
+  Stage-B path.
+* Ecosystem signal: the Qwen3.5 weight-space scene is moving fast (WSP paper Nov 2,
+  this Nov 4). Timing of our write-up matters.
