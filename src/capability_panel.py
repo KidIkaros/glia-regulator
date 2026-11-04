@@ -113,12 +113,8 @@ def build_reference(model, tok, device, max_new_tokens=96):
     return references
 
 
-def measure(model, tok, device, references, generate=None, max_new_tokens=96):
-    """Measure the panel at the model's CURRENT weights (i.e. at the current alpha).
-
-    `generate` is a callable(prompt) -> (text, info) so the caller can reuse its own
-    rollout path (with the presence penalty) rather than a second, different decoder.
-    """
+def measure_next_token(model, tok, device, references):
+    """KL and argmax agreement between the current weights and the base references."""
     kls, agrees, token_texts = [], [], []
     for prompt in ORDINARY_PROMPTS:
         reference = references[prompt]
@@ -129,25 +125,39 @@ def measure(model, tok, device, references, generate=None, max_new_tokens=96):
                                                 - probs.clamp_min(1e-12).log())).sum()))
         agrees.append(float(int(probs.argmax()) == reference["token"]))
         token_texts.append(tok.decode([int(probs.argmax())]))
+    return dict(ordinary_kl=float(np.mean(kls)), ordinary_agree=float(np.mean(agrees))), token_texts
+
+
+def measure_passage(model, tok, device, base_nll):
+    """Perplexity on the fixed passage, and its change against the base."""
     neutral_ids = tok(NEUTRAL_PASSAGE, return_tensors="pt").input_ids.to(device)
     with torch.no_grad():
         nll = float(model(neutral_ids, labels=neutral_ids).loss)
+    return dict(ppl_base=float(np.exp(base_nll)), ppl_at_alpha=float(np.exp(nll)),
+                ppl_delta_pct=float((np.exp(nll) / np.exp(base_nll) - 1) * 100))
 
+
+def measure_lengths(generate):
+    """Mean generated length across the ordinary prompts, and the texts themselves.
+
+    `generate` is a callable(prompt) -> (text, info) so the caller can reuse its own
+    rollout path (with the presence penalty) rather than a second, different decoder.
+    """
     lengths, texts = [], []
-    if generate is not None:
-        for prompt in ORDINARY_PROMPTS:
-            text, info = generate(prompt)
-            lengths.append(info.get("chars", len(text)))
-            texts.append(text)
-    panel = dict(
-        ordinary_kl=float(np.mean(kls)),
-        ordinary_agree=float(np.mean(agrees)),
-        ppl_base=float(np.exp(references["__passage__"])),
-        ppl_at_alpha=float(np.exp(nll)),
-        ppl_delta_pct=float((np.exp(nll) / np.exp(references["__passage__"]) - 1) * 100),
-    )
-    if lengths:
-        panel["mean_chars"] = float(np.mean(lengths))
+    for prompt in ORDINARY_PROMPTS:
+        text, info = generate(prompt)
+        lengths.append(info.get("chars", len(text)))
+        texts.append(text)
+    return float(np.mean(lengths)), texts
+
+
+def measure(model, tok, device, references, generate):
+    """The whole panel at the model's CURRENT weights (i.e. at the current alpha)."""
+    next_token, token_texts = measure_next_token(model, tok, device, references)
+    panel = dict(next_token)
+    panel.update(measure_passage(model, tok, device, references["__passage__"]))
+    mean_chars, texts = measure_lengths(generate)
+    panel["mean_chars"] = mean_chars
     return panel, dict(texts=texts, token_texts=token_texts)
 
 

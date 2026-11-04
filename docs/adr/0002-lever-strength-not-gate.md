@@ -215,3 +215,33 @@ so the lever needs a larger per-step push than the edit itself. Consequence for 
 design: **alpha(t) must be calibrated against behaviour (closed-thinking rate and
 capability damage), never against similarity to a reference edit.** The static edit is
 a source of mechanism, not a target to imitate.
+
+
+## Fifth amendment (2026-11-04) — the operating dose is 1.25, and the faithful dose is the harmful one
+
+Dose-response on 8 problems (6 loopers + 2 healthy controls) with a capability panel,
+protocol-matched on two Colab T4s:
+
+| alpha | closed | healthy | ordinary KL | argmax agreement | ppl | gate |
+|---|---|---|---|---|---|---|
+| 1.0 | 4/8 | 1/2 | 0.0047 | 100% | +3.07% | FAIL |
+| 1.25 | 8/8 | 2/2 | 0.0077 | 100% | +4.56% | PASS |
+| 1.5 | 6/8 | 2/2 | 0.0117 | 100% | +6.33% | PASS |
+| 1.75 | 8/8 | 2/2 | 0.0167 | 100% | +8.36% | PASS |
+| 2.0 | 7/8 | 2/2 | 0.0227 | 100% | +10.64% | PASS |
+
+alpha=1.0 - the dose that best reproduces the published edit's predictions - breaks a
+problem the base model solves correctly, and leaves four loopers looping. A 25%
+stronger dose closes everything, including the healthy controls, at a fraction of the
+capability cost of the larger doses.
+
+Consequences for the design, which are now constraints rather than suggestions:
+
+1. **the regulator emits 0 or ~1.25, never 1.0** - the reference-matching value is the
+   value that damages healthy behaviour;
+2. **selectivity is the binding constraint**, not strength: the damage at alpha=1.0 came
+   from firing on a context that did not need fixing, so the reader's false-positive
+   rate on healthy contexts is a first-class gate;
+3. **capability damage is monotone in the dose and saturates the benefit at 1.25**, so
+   the dose must be selected on behaviour and paid for in capability terms - the
+   smallest dose achieving the full effect.

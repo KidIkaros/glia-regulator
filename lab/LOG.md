@@ -192,3 +192,30 @@ resume; the presence penalty must be the published implementation (unique GENERA
 tokens, prompt excluded) or a 16k generation takes hours; and `colab upload` writes to
 the Jupyter contents root, not the VM filesystem, so the payload travels inline over
 stdin.
+
+## 2026-11-04 11:28-13:07 — DOSE-RESPONSE SWEEP (two Colab T4s, parallel)
+Alpha in {1.0, 1.25, 1.5, 1.75, 2.0} x 8 problems (6 known loopers + 2 healthy controls),
+protocol-matched (greedy, presence penalty 1.5 on every arm, fp32, 8192 cap), capability
+panel per dose (ordinary-prompt KL + argmax agreement, passage perplexity).
+  alpha 1.0  : 4/8 closed, healthy 1/2, kl 0.0047, agree 100%, ppl +3.07%  -> GATE FAIL
+  alpha 1.25 : 8/8 closed, healthy 2/2, kl 0.0077, agree 100%, ppl +4.56%  -> GATE PASS
+  alpha 1.5  : 6/8 closed, healthy 2/2, kl 0.0117, agree 100%, ppl +6.33%  -> GATE PASS
+  alpha 1.75 : 8/8 closed, healthy 2/2, kl 0.0167, agree 100%, ppl +8.36%  -> GATE PASS
+  alpha 2.0  : 7/8 closed, healthy 2/2, kl 0.0227, agree 100%, ppl +10.64% -> GATE PASS
+=> alpha=1.0 - the dose that best reproduces the published edit's PREDICTIONS - is the
+   only failing dose, and it fails by BREAKING healthy work (gsm8k_train_0, which the
+   base closes in 1,201 tokens, loops for 8,192 under alpha=1.0) as well as by leaving
+   4 of 6 loopers looping. The faithful dose is the harmful dose.
+=> alpha=1.25 is the operating point: the smallest dose reaching 8/8 with the least
+   capability cost among passing doses. Capability damage is monotone in the dose; the
+   closed rate saturates at 1.25 (the 1.25-2.0 wobble is 8-problem resolution).
+=> argmax agreement is 100% at EVERY dose: removing the loop direction does not blunt
+   ordinary text.
+=> for Stage B: the regulator emits 0 or ~1.25, never 1.0; and SELECTIVITY is the
+   binding constraint - false-positive firings on healthy contexts are exactly what
+   damaged capability at alpha=1.0.
+Infrastructure notes: this tier allows exactly 2 concurrent GPU sessions; a Colab
+session is reclaimed after ~2 h idle, so sessions are provisioned per phase; the CPU
+kernel route is unusable for behavioural work (2.4 h for ONE 16k-token arm) - a fact
+that justifies Colab T4 for everything; two fp32 0.8B checkpoints on this 6.3 GB box
+OOM-kill, so checkpoints are loaded one at a time.

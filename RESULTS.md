@@ -207,3 +207,77 @@ Three things fall out of this, and they matter more than any of the earlier numb
 - The dose-response is still coarse: one problem, two alphas. The next sweep is
   alpha in {1.0, 1.25, 1.5, 1.75, 2.0} across the 18 paired problems, with the
   capability panel attached.
+
+## 8. Dose-response with a capability panel: the operating point (and a regression)
+
+Run on two Colab T4 sessions in parallel (8 problems per alpha: 6 known loopers plus
+2 healthy controls the base model already closes). Protocol as published: greedy,
+presence penalty 1.5 on every arm, fp32, 8192-token cap.
+
+| alpha | closed | closed rate | healthy controls closed | ordinary KL | argmax agreement | perplexity | gate |
+|---|---|---|---|---|---|---|---|
+| 1.0 | 4/8 | 0.50 | **1/2** | 0.0047 | 100% | +3.07% | **FAIL** |
+| **1.25** | **8/8** | **1.00** | **2/2** | 0.0077 | 100% | +4.56% | **PASS** |
+| 1.5 | 6/8 | 0.75 | 2/2 | 0.0117 | 100% | +6.33% | PASS |
+| 1.75 | 8/8 | 1.00 | 2/2 | 0.0167 | 100% | +8.36% | PASS |
+| 2.0 | 7/8 | 0.88 | 2/2 | 0.0227 | 100% | +10.64% | PASS |
+
+### The most important row is alpha = 1.0
+
+alpha=1.0 is the dose that reproduces the published edit's *predictions* best (KL
+2.3e-5 to the edited checkpoint, an 875-token trajectory match). It is also the only
+dose that **fails** the gate - and it fails by *breaking* something, not merely by
+failing to fix something:
+
+* it leaves 4 of 6 loopers looping (train_2, train_4, train_5 all ran to the 8192-token
+  cap), and
+* it turns `gsm8k_train_0` - a problem the **base model solves correctly** - into a
+  8192-token loop. Under alpha=1.25 the same problem closes in 6,598 tokens, and the
+  base closes it in 1,201.
+
+So the "faithful" dose is a *regression* on healthy work, while a 25% stronger dose
+fixes everything. The dose that best mimics the reference intervention is not the dose
+that works, and the difference is not subtle.
+
+### Why 1.25 is the operating point
+
+The closed rate saturates at 1.25 (8/8 - every looper and both healthy controls), while
+the capability cost keeps growing monotonically with the dose (KL 0.0047 -> 0.0227,
+perplexity +3.1% -> +10.6%). 1.25 is therefore the smallest dose that achieves the full
+effect, and it carries the smallest cost of any passing dose. The noise in the closed
+rate between 1.25 and 2.0 (8/8, 6/8, 8/8, 7/8) is the resolution of an 8-problem set
+(one problem = 12.5%), not a real non-monotonicity - the capability damage, which is
+measured continuously, is cleanly monotone.
+
+### The capability result is stronger than expected
+
+At **every** dose, including the failing one, the intervened model's next-token argmax
+on all 8 ordinary prompts is **unchanged** from the base model (100% agreement), and
+perplexity rises by only 3-11% on a fixed neutral passage. Removing the loop direction
+does not blunt ordinary text. That is what makes the lever a plausible regulator rather
+than a blunt instrument - but it is a statement about *ordinary* text, and the
+healthy-control column is what says the intervention is not merely making the model
+terse: at alpha=1.25 the healthy problems still close AND still take thousands of
+tokens.
+
+### What this settles for Stage B
+
+* the operating point is **alpha* ~= 1.25**, so the regulator should emit 0 (off) or
+  ~1.25 (on) - never 1.0, which is the harmful dose;
+* the failure mode to avoid is not "too weak" but "on when it should be off" - a
+  regulator that fires on healthy contexts will break them exactly as alpha=1.0 did;
+* therefore the reader must be **selective**, and its selectivity needs its own gate:
+  false-positive firings on healthy contexts are the thing that damages capability.
+
+### Limitations (stated, not hidden)
+
+* 8 problems per dose: the closed rate has 12.5% resolution. The shape of the curve
+  near saturation is not resolved; the gates are.
+* "closed" means the model emitted its closing marker within the budget. A row can be
+  closed=True AND reach the token cap (the model closed its thinking and then kept
+  talking), so a late close counts the same as an early one. The close POSITION is not
+  recorded - it is added to the harness for the next phase.
+* the capability panel measures ordinary text, arithmetic, code, translation and
+  constrained instructions at the next-token level plus passage perplexity. It is much
+  stronger than the single KL sentence it replaces, but it is not a full capability
+  suite, and no claim beyond "ordinary behaviour is preserved at these doses" is made.

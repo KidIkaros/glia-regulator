@@ -126,8 +126,21 @@ def greedy_rollout(model, encoded, max_new_tokens, stop_ids, tokenizer=None,
                          "the closed-thinking label, and model.tokenizer does not exist")
     text = tokenizer.decode(new_tokens, skip_special_tokens=True)
     info = dict(n=int(new_tokens.shape[0]), closed="</think>" in text, chars=len(text),
-                seconds=round(time.time() - started, 1))
+                seconds=round(time.time() - started, 1),
+                close_position=close_position(text))
     return new_tokens, info
+
+
+def close_position(text):
+    """Character offset of the closing marker, or None if the thinking never closed.
+
+    "closed" alone is too coarse: a model can close its thinking at token 50 or at
+    token 8,100 of an 8,192-token budget, and those are not the same outcome. The
+    position makes the difference measurable.
+    """
+    marker = "</think>"
+    index = text.find(marker)
+    return None if index < 0 else index
 
 
 def load_pairs(path, keys=("id", "problem", "base_looped")):

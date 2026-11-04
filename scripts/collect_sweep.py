@@ -87,6 +87,20 @@ def grade(rows):
     return summary
 
 
+def render(summary):
+    """The one table a human reads."""
+    print("\n=== DOSE-RESPONSE (alpha: closed rate | healthy | ordinary_kl | ppl%) ===")
+    for alpha in sorted(summary, key=float):
+        entry = summary[alpha]
+        panel = entry.get("panel") or {}
+        print(f"  alpha {alpha:>4}: {entry['closed']}/{entry['n']} closed "
+              f"({entry['closed_rate']:.2f}) | healthy {entry['healthy_closed']}/"
+              f"{entry['healthy_n']} | kl {panel.get('ordinary_kl', float('nan')):.4f} | "
+              f"agree {panel.get('ordinary_agree', float('nan')):.3f} | "
+              f"ppl {panel.get('ppl_delta_pct', float('nan')):+.2f}% | "
+              f"gate {'PASS' if entry['gate_pass'] else 'fail'}")
+
+
 def main():
     sessions = sys.argv[1:] or ["a8d8a8", "d3b480"]
     rows = []
@@ -106,16 +120,7 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     json.dump(dict(rows=unique, summary=summary),
               open(os.path.join(out_dir, "sweep_results.json"), "w"), indent=1)
-    print("\n=== DOSE-RESPONSE (alpha: closed rate | healthy | ordinary_kl | ppl%) ===")
-    for alpha in sorted(summary, key=float):
-        entry = summary[alpha]
-        panel = entry.get("panel") or {}
-        print(f"  alpha {alpha:>4}: {entry['closed']}/{entry['n']} closed "
-              f"({entry['closed_rate']:.2f}) | healthy {entry['healthy_closed']}/"
-              f"{entry['healthy_n']} | kl {panel.get('ordinary_kl', float('nan')):.4f} | "
-              f"agree {panel.get('ordinary_agree', float('nan')):.3f} | "
-              f"ppl {panel.get('ppl_delta_pct', float('nan')):+.2f}% | "
-              f"gate {'PASS' if entry['gate_pass'] else 'fail'}")
+    render(summary)
     print("\nsaved:", os.path.join(out_dir, "sweep_results.json"))
     return 0
 
