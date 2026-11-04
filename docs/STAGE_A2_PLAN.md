@@ -4,6 +4,13 @@ Written 2026-11-04 after the slowdown request. Nothing launches without a line i
 file. Facts marked [V] are verified by a tool result in this session; anything else is
 an estimate and says so.
 
+FRAMING (see docs/CONTEXT.md): Stage A2 is not an interpretability milestone - it is
+METHOD VALIDATION for the Companion program. The 128 loop neurons are the clean testbed
+(a causally verified edit) on which the find -> locate -> regulate chain is proven
+before it is pointed at personality traits, which are messier: distributed, and not
+cleanly editable. If the method cannot be validated here, personality work needs a
+different instrument, and the program should know that now.
+
 ## Where we actually are
 
 Established (earlier phases, all committed):
