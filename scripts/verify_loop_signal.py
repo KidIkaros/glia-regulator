@@ -36,12 +36,13 @@ EDITED = os.path.join(ROOT, "models", "edited-authors")
 PAIRS = os.path.join(ROOT, "s1_pairs.json")
 
 
-def extract_directions():
-    """The loop direction per layer, from the edited checkpoint, loaded alone.
+def load_base_and_directions():
+    """The base model (measured) and the loop direction per layer, in ONE pass.
 
     The direction is a normalised column of the delta D = W_edited - W_base, so the
-    edited checkpoint plus the base's two weight matrices are enough - and they do not
-    have to be resident at the same time.
+    edited checkpoint plus the base's weight matrices are enough. MEMORY: the base is
+    loaded ONCE and kept - loading it a second time cost 3.2 GB that torch's allocator
+    never released, and the OOM killer took the process (exit 137).
     """
     print(f"loading edited from {EDITED}", flush=True)
     edited, _ = load_model(EDITED, device="cpu", dtype=torch.float32)
@@ -53,8 +54,8 @@ def extract_directions():
     del edited
     gc.collect()
 
-    print(f"loading base from {BASE} (for the delta)", flush=True)
-    base, _ = load_model(BASE, device="cpu", dtype=torch.float32)
+    print(f"loading base from {BASE} (for the delta and the measurement)", flush=True)
+    base, tok = load_model(BASE, device="cpu", dtype=torch.float32)
     for layer in (15, 19):
         edited_weights = torch.load(os.path.join(ROOT, "lab", f"edited_L{layer}.pt"),
                                     weights_only=True)
@@ -62,18 +63,25 @@ def extract_directions():
         delta = (edited_weights.float() - base_weights.float())
         columns = delta[:, delta.norm(dim=0) > 0.05]
         directions[layer] = loop_direction(columns.numpy())
-        del delta, columns
-    del base
+        del delta, columns, edited_weights
     gc.collect()
-    return directions
+    return base, tok, directions
 
 
 def measure_problem(base, tok, probes, problem, tokens, stop_ids):
     """One problem: the loop signature over the prompt alone and over a short rollout."""
+    encoded = prompt_ids(tok, problem["problem"])
+    # prompt-only signature: ONE forward pass over the prompt, before any generation.
+    # (Measuring it after probe.reset() but before a forward pass returns None for every
+    # problem - which silently produced a meaningless AUC of 0.000.)
     for probe in probes.values():
         probe.reset()
-    encoded = prompt_ids(tok, problem["problem"])
+    with torch.no_grad():
+        base(encoded)
     prompt_only = {layer: summarise(probe.stack()) for layer, probe in probes.items()}
+    # then the generated-trajectory signature
+    for probe in probes.values():
+        probe.reset()
     _, info = greedy_rollout(base, encoded, tokens, stop_ids, tokenizer=tok)
     row = dict(id=problem["id"], base_looped=str(problem.get("base_looped")),
                chars=info["chars"], closed=info["closed"], n=info["n"],
@@ -97,13 +105,10 @@ def main():
     # checkpoints are loaded ONE AT A TIME: the edited one only to extract the delta's
     # direction, then it is freed before the base model (the one we actually measure) is
     # loaded.
-    directions = extract_directions()
+    base, tok, directions = load_base_and_directions()
     print(f"loop directions: "
           f"{ {k: [round(float(x), 4) for x in v[:3]] for k, v in directions.items()} }",
           flush=True)
-
-    print(f"loading base from {BASE}", flush=True)
-    base, tok = load_model(BASE, device="cpu", dtype=torch.float32)
 
     probes = {}
     for layer, direction in directions.items():

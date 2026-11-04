@@ -219,3 +219,28 @@ session is reclaimed after ~2 h idle, so sessions are provisioned per phase; the
 kernel route is unusable for behavioural work (2.4 h for ONE 16k-token arm) - a fact
 that justifies Colab T4 for everything; two fp32 0.8B checkpoints on this 6.3 GB box
 OOM-kill, so checkpoints are loaded one at a time.
+
+## 2026-11-04 13:05-13:24 — NEGATIVE RESULT: the loop direction is not a prompt-level signature
+Hypothesis: since the fix removes one direction d from the L15/L19 MLP outputs, the
+projection <down_proj_out, d_hat> should mark the loop state and label contexts in ONE
+forward pass instead of a 410 s rollout - which would make thousands of Stage-B training
+labels affordable.
+Result (128-token generation, 18 labelled problems, 16 loopers + 2 healthy):
+  L15 AUC 0.688 (loopers 0.1303 vs healthy 0.1121)
+  L19 AUC 0.312 (loopers 0.2011 vs healthy 0.2172) - BELOW chance
+=> falsified at this horizon. The projection measures activation magnitude along the
+   direction the fix removes, not loop-ness; at 128 tokens neither group has entered the
+   attractor. A longer horizon might separate them, but only after the model has been
+   looping for hundreds of tokens, which erodes the cost advantage that motivated it.
+=> the deeper reading: "will loop" is a property of the TRAJECTORY, not of the prompt
+   (gsm8k_train_0 is healthy yet takes 6,598 tokens to close at alpha=1.25, while several
+   loopers close in 1,100-2,500). So the regulator must read the generated trajectory -
+   which is what the glial's slow-state reader was always meant to do - and the training
+   signal must come from within a rollout (is the recent text re-deriving a step?), not
+   from a prompt-level classifier.
+=> measurement bug fixed: the prompt-only column reported AUC 0.000 because summarise()
+   ran after reset() and before any forward pass, so every score was None. Now a real
+   forward pass precedes it.
+=> also: the CPU route cannot run this (two fp32 checkpoints OOM-killed the process
+   twice, exit 137 - torch's allocator retains the first copy, so the base is loaded
+   exactly once now). 18 x 128 tokens takes ~15 min on CPU vs ~1 min on a T4.

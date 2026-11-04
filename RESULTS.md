@@ -281,3 +281,59 @@ tokens.
   constrained instructions at the next-token level plus passage perplexity. It is much
   stronger than the single KL sentence it replaces, but it is not a full capability
   suite, and no claim beyond "ordinary behaviour is preserved at these doses" is made.
+
+## 9. Negative result: the loop direction is not a prompt-level signature
+
+Stage B needs labels (which contexts loop?) and rollout labelling costs ~410 s per
+looping problem, so I tested whether the loop direction is a cheap signature: the fix
+removes one direction d from the L15/L19 MLP outputs, so the projection
+<down_proj_out[t], d_hat> should mark the loop state - measurable in ONE forward pass
+instead of an 8192-token rollout.
+
+**It does not work, at least at this horizon.** Over a 128-token generation on the 18
+labelled problems (16 loopers, 2 healthy):
+
+| layer | AUC (loopers vs healthy) | loopers | healthy |
+|---|---|---|---|
+| 15 | 0.688 | 0.1303 | 0.1121 |
+| 19 | 0.312 | 0.2011 | 0.2172 |
+
+L15 is barely above chance; L19 is *below* chance (the healthy problems have a larger
+mean projection than the loopers). Neither is usable as a labeller: a threshold that
+catches the loopers would fire on the healthy controls far more often than the 2/2
+false-positive rate the dose-response showed to be damaging.
+
+### Why this is not just a threshold problem
+
+The projection measures the *magnitude* of the model's activation along the direction
+the fix removes; it is not a loop detector. Early in a generation the model is doing
+ordinary reasoning in both groups, and the loop has not yet established itself - at 128
+tokens neither group has entered the attractor. A longer horizon might separate them,
+but the regime where a looper is distinguishable is the regime where it has already
+been looping for hundreds of tokens, which erodes exactly the cost advantage that
+motivated the measurement.
+
+### What it changes
+
+1. **The regulator cannot be purely prompt-reading.** The distinction between a problem
+   that will loop and one that will not is not visible in the prompt at the level this
+   signal measures - and arguably not a property of the prompt at all: `gsm8k_train_0`
+   (healthy) takes 6,598 tokens to close under alpha=1.25, while several loopers close
+   in 1,100-2,500. "Will loop" is a property of the *trajectory*, not of the question.
+2. **So the reader must read the generated trajectory, not the prompt.** That is what
+   the glial's slow-state reader is for - and it means the training signal must come
+   from *within* a rollout (is the recent text re-deriving the same step?), which is
+   cheap to compute from tokens we already generate, rather than from a prompt-level
+   classifier.
+3. **The honest consequence for the plan**: cheap labelling of thousands of problems is
+   NOT available via the projection. The 18 labelled problems remain the ground truth
+   for closure behaviour, and the Stage B training set must be built from rollouts we
+   already pay for (the sweep's 40 rollouts are a start) plus in-trajectory features.
+
+### Measurement bug this exposed (fixed)
+
+The prompt-only column of the first run reported AUC 0.000 with NaN scores for every
+problem: `summarise()` was called after `probe.reset()` but *before* any forward pass,
+so the probe had nothing to report and every score was None. The prompt-only signature
+is now measured by a real forward pass. The generated-trajectory numbers above are
+unaffected - those probes did see tokens.
