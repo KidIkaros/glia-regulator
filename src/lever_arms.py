@@ -112,7 +112,12 @@ def run_arm(label, which, alpha):
                 closed_rate=closed / N_PROBLEMS, mean_chars=float(np.mean(chars)))
 
 
-# ---------- corrected logit equivalence: ckpt lever at alpha=1 vs the edited checkpoint ----------
+# ---------- logit equivalence: the CKPT lever at alpha=1 vs the edited checkpoint ----------
+# (must use the checkpoint delta; the "ours" lever is a DIFFERENT edit - our own
+#  direction - so it cannot match their checkpoint, and the gap measures that distance)
+for lv in levers:
+    lv.remove()
+levers = make_levers("ckpt")
 maxdiff, agree = 0.0, True
 for p in pairs[:2]:
     enc = prompt_ids(p["problem"])
@@ -126,7 +131,9 @@ for p in pairs[:2]:
     maxdiff = max(maxdiff, d)
     agree = agree and bool((lg_a.argmax(-1) == lg_b.argmax(-1)).all())
     log(f"A. id={p['id']}: max|delta logits| = {d:.5f} argmax agree {agree}")
-log(f"A. LOGIT EQUIVALENCE (alpha=1): max|delta| = {maxdiff:.5f} argmax agree {agree}")
+log(f"A. LOGIT EQUIVALENCE (ckpt lever, alpha=1): max|delta| = {maxdiff:.5f} argmax agree {agree}")
+for lv in levers:
+    lv.remove()
 
 arms = {}
 arms["base"] = run_arm("base", "ours", 0.0)

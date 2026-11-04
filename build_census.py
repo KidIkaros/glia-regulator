@@ -1,4 +1,4 @@
-"""Build the lever-equivalence kernel (GPU, id mauricew/glia-lever-arms). ~20 min quota."""
+"""Build the lever-equivalence kernel (GPU, id mauricew/glia-lever-v2). ~20 min quota."""
 import base64
 import json
 import os
@@ -7,7 +7,7 @@ import py_compile
 ROOT = os.path.dirname(os.path.abspath(__file__))
 FILES = {
     "src/lever.py": os.path.join(ROOT, "src", "lever.py"),
-    "src/lever_arms.py": os.path.join(ROOT, "src", "lever_arms.py"),
+    "src/lever_v2.py": os.path.join(ROOT, "src", "lever_v2.py"),
     
     "s1_pairs.json": os.path.join(ROOT, "s1_pairs.json"),
     "neurons_L15.npy": os.path.join(ROOT, "ground_truth", "neurons_L15.npy"),
@@ -37,19 +37,19 @@ subprocess.run([sys.executable, "-m", "pip", "install", "--quiet",
 import torch
 print("device:", "cuda" if torch.cuda.is_available() else "cpu", flush=True)
 
-subprocess.run([sys.executable, os.path.join(root, "src", "lever_arms.py")],
+subprocess.run([sys.executable, os.path.join(root, "src", "lever_v2.py")],
                check=True, env=dict(os.environ, OUT_DIR="/kaggle/working",
                                     PYTHONPATH=os.path.join(root, "src"),
-                                    N_PROBLEMS="3", MAX_NEW="8192"))
+                                    N_PROBLEMS="2", MAX_NEW="8192"))
 '''
 
 src = MAIN.replace("__PAYLOAD__", repr(payload))
-out_dir = os.path.join(ROOT, "kernel_arms")
+out_dir = os.path.join(ROOT, "kernel_v2")
 os.makedirs(out_dir, exist_ok=True)
 open(os.path.join(out_dir, "main.py"), "w").write(src)
 py_compile.compile(os.path.join(out_dir, "main.py"), doraise=True)
 
-kid = os.environ.get("KAGGLE_KERNEL_ID", "mauricew/glia-lever-arms")
+kid = os.environ.get("KAGGLE_KERNEL_ID", "mauricew/glia-lever-v2")
 meta = {"id": kid, "title": kid.split("/")[-1], "code_file": "main.py",
         "language": "python", "kernel_type": "script",
         "enable_gpu": True, "enable_internet": True, "is_private": True,
