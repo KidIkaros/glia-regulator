@@ -30,6 +30,7 @@ from harness import (block_triton_kernels, eos_token_ids, greedy_rollout, load_m
                      load_pairs, prompt_ids)
 from lever import build_lever_from_checkpoints
 from loop_signal import LoopSignalProbe, loop_direction, separation, summarise
+from runlog import as_bool
 
 BASE = os.path.join(ROOT, "models", "base-hub-current")
 EDITED = os.path.join(ROOT, "models", "edited-authors")
@@ -123,11 +124,6 @@ def main():
         print(f"[{index+1}/{len(pairs)}] {row['id']}: looped={row['base_looped']} "
               f"closed={row['closed']} n={row['n']} "
               f"score={ {k: round(v, 4) for k, v in row['scores'].items()} }", flush=True)
-
-    def as_bool(value):
-        if isinstance(value, str):
-            return value.strip().lower() in ("true", "1", "yes")
-        return bool(value)
 
     loopers = [r for r in rows if as_bool(r["base_looped"])]
     healthy = [r for r in rows if not as_bool(r["base_looped"])]

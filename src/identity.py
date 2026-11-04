@@ -29,6 +29,7 @@ sys.path.insert(0, HERE)
 from harness import (block_triton_kernels, eos_token_ids, greedy_rollout, load_model,
                      load_pairs, prompt_ids)
 from lever import build_lever_from_checkpoints
+from runlog import as_bool, find_pairs
 
 block_triton_kernels()
 
@@ -45,20 +46,6 @@ started = time.time()
 
 def log(*parts):
     print(f"[identity {PHASE} {round(time.time()-started)}s]", *parts, flush=True)
-
-
-def find_pairs():
-    for candidate in (os.path.join(HERE, "s1_pairs.json"),
-                      os.path.join(os.path.dirname(HERE), "s1_pairs.json")):
-        if os.path.exists(candidate):
-            return candidate
-    raise FileNotFoundError("s1_pairs.json not found next to the driver or one level up")
-
-
-def as_bool(value):
-    if isinstance(value, str):
-        return value.strip().lower() in ("true", "1", "yes")
-    return bool(value)
 
 
 def fit(lens):
@@ -186,7 +173,7 @@ def fork():
     levers = [DeltaLever(base.model.layers[layer].mlp.down_proj, spec[layer][0],
                          spec[layer][1], lambda: switch["a"]) for layer in spec]
     stop_ids = eos_token_ids(tok)
-    pairs = load_pairs(find_pairs())
+    pairs = load_pairs(find_pairs(HERE, os.path.dirname(HERE)))
 
     done = set()
     out_path = os.path.join(RESULTS_DIR, "fork.jsonl")

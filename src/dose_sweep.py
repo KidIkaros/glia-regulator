@@ -83,46 +83,20 @@ NEUTRAL_PASSAGE = (
 )
 
 
-def as_bool(value):
-    """s1_pairs.json stores base_looped as the STRING "False"/"True", which is truthy
-    for both - so it must be parsed, not truth-tested."""
-    if isinstance(value, str):
-        return value.strip().lower() in ("true", "1", "yes")
-    return bool(value)
-
-
 def log(*parts):
     print(f"[sweep {round(time.time()-started)}s]", *parts, flush=True)
 
 
-def find_pairs():
-    for candidate in (os.path.join(HERE, "s1_pairs.json"),
-                      os.path.join(os.path.dirname(HERE), "s1_pairs.json")):
-        if os.path.exists(candidate):
-            return candidate
-    raise FileNotFoundError("s1_pairs.json not found next to the driver or one level up")
+from runlog import append_jsonl, as_bool, find_pairs, read_jsonl  # shared pure helpers
 
 
 def read_rows():
     """One row per (alpha, problem) plus one panel row per alpha."""
-    rows = {}
-    if not os.path.exists(RESULTS_PATH):
-        return rows
-    for line in open(RESULTS_PATH):
-        line = line.strip()
-        if line:
-            try:
-                row = json.loads(line)
-                rows[row["key"]] = row
-            except json.JSONDecodeError:
-                continue
-    return rows
+    return read_jsonl(RESULTS_PATH)
 
 
 def record(key, payload):
-    os.makedirs(os.path.dirname(RESULTS_PATH), exist_ok=True)
-    with open(RESULTS_PATH, "a") as handle:
-        handle.write(json.dumps(dict(payload, key=key)) + "\n")
+    append_jsonl(RESULTS_PATH, payload, key)
     log(f"recorded {key}")
 
 
@@ -139,7 +113,7 @@ switch = {"a": 0.0}
 levers = [DeltaLever(base.model.layers[layer].mlp.down_proj, spec[layer][0],
                      spec[layer][1], lambda: switch["a"]) for layer in spec]
 stop_ids = eos_token_ids(tok)
-all_pairs = load_pairs(find_pairs())
+all_pairs = load_pairs(find_pairs(HERE, os.path.dirname(HERE)))
 if os.environ.get("BALANCED", "1") == "1":
     # a dose-response needs healthy CONTROLS: part of the set must be problems the base
     # model already handles, so we can see whether the intervention damages them
