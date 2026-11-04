@@ -103,7 +103,8 @@ problem = pairs[0]
 switch["a"] = 0.0
 encoded = prompt_ids(tok, problem["problem"])
 log(f"prompt: {encoded.shape[1]} tokens; rolling out {ROLLOUT}")
-new_tokens, rollout_info = greedy_rollout(base, encoded, ROLLOUT, eos_token_ids(tok))
+new_tokens, rollout_info = greedy_rollout(base, encoded, ROLLOUT, eos_token_ids(tok),
+                                           tokenizer=tok)
 rate = rollout_info["n"] / max(1e-6, rollout_info["seconds"])
 log(f"rollout done: {rollout_info['n']} tokens at {rate:.2f} tok/s | "
     f"still-thinking={not rollout_info['closed']}")

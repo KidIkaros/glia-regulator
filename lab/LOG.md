@@ -135,3 +135,33 @@ source must stay under 1 MB (so the delta is derived in-kernel from the two chec
 rather than shipped - which also removes the revision-drift risk).
 Next (same CPU budget): `glia-cpu-traj` - free-running greedy rollouts of the edited
 checkpoint vs base+lever(alpha), measuring the first token index where they differ.
+
+## 2026-11-03 20:2x-21:4x — Colab as the GPU: official CLI, not a browser
+Kaggle GPU quota is spent until Sunday (29.97/30h), so the fp32 16k fidelity run
+moved to Colab. Two routes tried:
+  (a) camoufox (headful Firefox) driving the Colab UI: works, but every step is
+      fragile - the "Upload notebook" button opens a DIALOG (not a file chooser), the
+      GitHub route needs a GitHub OAuth grant in the user's account, the Drive tab
+      needs the file to be at the Drive root, the notebook's drive.mount() blocks on a
+      permission modal nobody clicks, and a screenshot inside an error handler hung for
+      60 s and killed the driver (fixed: safe_shot, screenshots can never kill a run).
+  (b) the OFFICIAL Colab CLI (google-colab-cli, ~/.local/bin/colab): the right tool.
+      `colab new --gpu T4` provisions a session in seconds; `colab exec` runs code
+      (stdin or a file) with --env and --timeout; `colab sessions/status/upload/
+      download/stop` cover the rest; liveness is activity-based, so a session does not
+      evaporate mid-run.
+      Auth: its OWN OAuth consent is required - the scopes are
+      .../auth/colaboratory and .../auth/drive.file, which `gcloud auth
+      application-default login` does NOT request, so ADC alone is not enough. The
+      consent can be completed in camoufox (which already has the user's Google
+      session, so no password is typed by the agent); the CLI reads the code from it.
+      Gotcha: `colab upload` writes to the Jupyter contents root, NOT the VM
+      filesystem the driver reads (/content held only .config and sample_data), so the
+      robust route is to send one self-contained script over stdin with the payload
+      base64-embedded (scripts/build_colab_script.py).
+      Bug this route caught: harness.greedy_rollout decoded via model.tokenizer, which
+      does not exist -> chars 0 and closed=False for every rollout, i.e. the
+      closed-thinking label was silently broken. The tokenizer is now an explicit
+      argument and a missing one raises instead of returning silence.
+Colab PRO tier confirmed (priority GPUs, longer sessions). If the CLI exposes H100/A100
+on this tier, Modal's H200 allowance becomes unnecessary for this project.

@@ -29,12 +29,26 @@ import re
 import sys
 import time
 
-RESULTS_MARKER = "=== RESULTS ON DRIVE ==="
+RESULTS_MARKER = "=== RESULTS ==="
 PROFILE_DIR = os.path.expanduser("~/.cache/camoufox/glia-profile")
 
 
 def log(*parts):
     print(f"[colab-driver {time.strftime('%H:%M:%S')}]", *parts, flush=True)
+
+
+def safe_shot(page, path, timeout_ms=15000):
+    """Screenshot that can never kill the run.
+
+    A screenshot in an error handler hung on 'waiting for fonts to load' for 60 s and
+    took the whole driver down, losing the session it was supposed to report on.
+    """
+    try:
+        safe_shot(page, path, timeout=timeout_ms)
+    except Exception as error:                           # noqa: BLE001
+        log(f"screenshot skipped ({type(error).__name__})")
+        return False
+    return True
 
 
 def page_text(page):
@@ -73,6 +87,75 @@ def wait_for_sign_in(page, timeout_s):
     return False
 
 
+def args_out_dir():
+    return os.environ.get("COLAB_OUT_DIR", "lab/colab")
+
+
+def open_notebook(page, notebook_url, attempts=3):
+    """Open a notebook hosted on GitHub: no file chooser, no upload dialog.
+
+    Colab renders a GitHub-hosted notebook directly at
+    /github/<owner>/<repo>/blob/<path>. That is more reliable than the landing page's
+    upload button, which did not raise a filechooser event when clicked.
+    """
+    for attempt in range(1, attempts + 1):
+        log(f"opening from GitHub (attempt {attempt}/{attempts}): {notebook_url}")
+        try:
+            page.goto(notebook_url)
+            settle(page, 6)
+            text = page_text(page)
+            # The GitHub route lands on the "Open notebook" DIALOG with the repo,
+            # branch and path already selected; the notebook opens when its filename
+            # is clicked. (The previous check - "Colab" in the page text - was a false
+            # positive: the dialog says Colab but no notebook is open.)
+            if "Open notebook" in text and os.path.basename(notebook_url) in text:
+                log("Open-notebook dialog is up; clicking the notebook filename")
+                page.get_by_text(os.path.basename(notebook_url), exact=False).first.click(
+                    timeout=20000)
+                settle(page, 8)
+                text = page_text(page)
+            if "Runtime" in text and os.path.basename(notebook_url) not in text[:200]:
+                log("notebook editor is open")
+                return True
+            log(f"notebook did not open yet (page says: {text[:140]!r})")
+        except Exception as error:                       # noqa: BLE001
+            log(f"attempt {attempt} failed: {type(error).__name__}: {str(error)[:160]}")
+        page.wait_for_timeout(3000)
+    return False
+
+
+def open_from_drive(page, notebook_name, attempts=2):
+    """Open the notebook from the user's own Google Drive (no GitHub OAuth needed).
+
+    The notebook was uploaded to Drive with `gio copy`, so Colab's Open-notebook dialog
+    -> "Google Drive" tab can open it directly. The GitHub tab needs a GitHub
+    authorisation grant in the user's account, so Drive is the reliable route.
+    """
+    for attempt in range(1, attempts + 1):
+        log(f"Drive attempt {attempt}/{attempts}")
+        try:
+            page.goto("https://colab.research.google.com/")
+            settle(page, 4)
+            page.get_by_text("Upload notebook", exact=False).first.click(timeout=20000)
+            page.wait_for_timeout(2500)
+            log("Open-notebook dialog: selecting the Google Drive tab")
+            page.get_by_text("Google Drive", exact=True).first.click(timeout=15000)
+            page.wait_for_timeout(4000)
+            page.get_by_text(notebook_name, exact=False).first.click(timeout=20000)
+            log("clicked the notebook in Drive; waiting for it to open")
+            page.wait_for_timeout(10000)
+            settle(page, 6)
+            text = page_text(page)
+            if "Runtime" in text:
+                log("notebook editor is open")
+                return True
+            log(f"notebook still not open (page says: {text[:140]!r})")
+        except Exception as error:                       # noqa: BLE001
+            log(f"Drive attempt {attempt} failed: {type(error).__name__}: {str(error)[:180]}")
+            page.wait_for_timeout(3000)
+    return False
+
+
 def upload_notebook(page, notebook_path, attempts=3):
     """Upload via the landing page's 'Upload notebook' button (a file chooser).
 
@@ -85,18 +168,25 @@ def upload_notebook(page, notebook_path, attempts=3):
         try:
             page.goto("https://colab.research.google.com/")
             settle(page, 3)
-            with page.expect_file_chooser(timeout=30000) as chooser_info:
-                page.get_by_text("Upload notebook", exact=False).first.click(timeout=20000)
-            chooser_info.value.set_files(notebook_path)
-            log("file chooser satisfied; waiting for the notebook to open")
-            page.wait_for_timeout(8000)
-            settle(page, 4)
-            if "colab.research.google.com" in page.url and is_signed_in(page):
+            # "Upload notebook" opens the Open-notebook DIALOG (tabs: Examples /
+            # Recent / Drive / GitHub / Upload) - it does not raise a filechooser event,
+            # which is why waiting for one timed out.
+            page.get_by_text("Upload notebook", exact=False).first.click(timeout=20000)
+            page.wait_for_timeout(2500)
+            log("Open-notebook dialog: selecting the Upload tab")
+            page.get_by_text("Upload", exact=True).first.click(timeout=15000)
+            page.wait_for_timeout(1500)
+            page.set_input_files("input[type=file]", notebook_path, timeout=30000)
+            log("file input set; waiting for the notebook to open")
+            page.wait_for_timeout(10000)
+            settle(page, 5)
+            if is_signed_in(page):
                 log("notebook opened")
                 return True
         except Exception as error:                       # noqa: BLE001
             log(f"upload attempt {attempt} failed: {type(error).__name__}: "
                 f"{str(error)[:200]}")
+            safe_shot(page, os.path.join(args_out_dir(), "03_upload_attempt_fail.png"))
             page.wait_for_timeout(3000)
     return False
 
@@ -147,6 +237,10 @@ def main():
     parser.add_argument("--sign-in-timeout", type=int, default=1800)
     parser.add_argument("--results-timeout", type=int, default=7200)
     parser.add_argument("--headless", action="store_true")
+    parser.add_argument("--notebook-url",
+                        default="https://colab.research.google.com/github/KidIkaros/"
+                                "glia-regulator/blob/glia_colab_fidelity.ipynb",
+                        help="Colab URL that renders the notebook (GitHub-hosted)")
     args = parser.parse_args()
 
     notebook = os.path.abspath(args.notebook)
@@ -155,6 +249,7 @@ def main():
         return 1
     os.makedirs(args.out_dir, exist_ok=True)
     os.makedirs(PROFILE_DIR, exist_ok=True)
+    os.environ["COLAB_OUT_DIR"] = args.out_dir
 
     from camoufox.sync_api import Camoufox
 
@@ -165,28 +260,36 @@ def main():
         log("opening Colab")
         page.goto("https://colab.research.google.com/")
         page.wait_for_timeout(5000)
-        page.screenshot(path=os.path.join(args.out_dir, "01_colab.png"))
+        safe_shot(page, os.path.join(args.out_dir, "01_colab.png"))
 
         if "Sign in" in page_text(page)[:400]:
             if not wait_for_sign_in(page, args.sign_in_timeout):
                 log("sign-in timed out")
-                page.screenshot(path=os.path.join(args.out_dir, "02_signin_timeout.png"))
+                safe_shot(page, os.path.join(args.out_dir, "02_signin_timeout.png"))
                 return 2
-        page.screenshot(path=os.path.join(args.out_dir, "02_signed_in.png"))
+        safe_shot(page, os.path.join(args.out_dir, "02_signed_in.png"))
 
-        if not upload_notebook(page, notebook):
-            log("upload failed")
-            page.screenshot(path=os.path.join(args.out_dir, "03_upload_failed.png"))
-            return 4
-        page.screenshot(path=os.path.join(args.out_dir, "03_uploaded.png"))
+        # Drive first (the notebook is already there); GitHub needs an OAuth grant;
+        # the upload dialog is the last resort.
+        notebook_name = os.path.basename(notebook)
+        if not open_from_drive(page, notebook_name):
+            log("Drive route did not open the notebook; trying GitHub")
+            if not open_notebook(page, args.notebook_url, attempts=1):
+                log("GitHub route needs a GitHub authorisation in this account; "
+                    "using the upload dialog instead")
+                if not upload_notebook(page, notebook):
+                    log("upload failed")
+                    safe_shot(page, os.path.join(args.out_dir, "03_upload_failed.png"))
+                    return 4
+        safe_shot(page, os.path.join(args.out_dir, "03_uploaded.png"))
 
         run_all(page)
         page.wait_for_timeout(5000)
-        page.screenshot(path=os.path.join(args.out_dir, "04_running.png"))
+        safe_shot(page, os.path.join(args.out_dir, "04_running.png"))
         log("running; this takes ~40-60 min on a T4 (16k-token rollouts in fp32)")
 
         payload = wait_for_results(page, args.results_timeout, args.out_dir)
-        page.screenshot(path=os.path.join(args.out_dir, "05_done.png"))
+        safe_shot(page, os.path.join(args.out_dir, "05_done.png"))
         if payload is None:
             return 3
         log(json.dumps(payload, indent=1))

@@ -87,7 +87,7 @@ log(f"prompt {encoded.shape[1]} tokens; rollout {ROLLOUT}")
 
 
 def rollout(model):
-    return greedy_rollout(model, encoded, ROLLOUT, stop_ids)
+    return greedy_rollout(model, encoded, ROLLOUT, stop_ids, tokenizer=tok)
 
 
 # reference: the fix's own behaviour

@@ -57,13 +57,27 @@ print("cuda:", torch.cuda.is_available(),
 if not torch.cuda.is_available():
     raise SystemExit("no GPU in this session - Colab free tier may not have one right now")
 
-from google.colab import drive
-drive.mount("/content/drive")
-os.makedirs("/content/drive/glia_colab", exist_ok=True)
-print("drive mounted; results -> /content/drive/glia_colab/results.jsonl", flush=True)
+# The Drive mount can raise a permission prompt that nobody clicks, which would stall
+# the run before a single token is generated. So: try to mount, and if it is not
+# available, write the results into the runtime's own filesystem and print them.
+RESULTS_DIR = "/content/glia_out"
+try:
+    from google.colab import drive
+    drive.mount("/content/drive")
+    os.makedirs("/content/drive/glia_colab", exist_ok=True)
+    RESULTS_DIR = "/content/drive/glia_colab"
+    print("drive mounted; results ->", RESULTS_DIR, flush=True)
+except Exception as error:
+    print("drive not mounted (", error, ") - results stay in the runtime filesystem",
+          flush=True)
+os.environ["RESULTS_DIR"] = RESULTS_DIR
 '''
 
-RUN = '''os.environ["RESULTS_PATH"] = "/content/drive/glia_colab/results.jsonl"
+RUN = '''os.environ["RESULTS_PATH"] = os.path.join(
+    os.environ.get("RESULTS_DIR", "/content/glia_out"), "results.jsonl")
+# also drop a copy into the Drive folder the desktop is linked to, so the results can
+# be read from the local machine with: gio copy "google-drive://.../glia_results.jsonl" .
+os.environ.setdefault("MIRROR_FOLDER_ID", "0AM4A_9P6W9cBUk9PVA")
 os.environ.setdefault("ROLLOUT", "16384")
 os.environ.setdefault("ALPHAS", "1.0 1.5")
 subprocess.run([sys.executable, os.path.join(root, "src", "colab_dose.py")], check=True)
@@ -78,6 +92,14 @@ summary = {r["arm"]: dict(n=r.get("info", {}).get("n"),
 print("\\n=== RESULTS ON DRIVE ===")
 print(json.dumps(summary, indent=1))
 print("results file:", path)
+
+import shutil
+mirror = os.path.join("/content/drive", os.environ["MIRROR_FOLDER_ID"], "glia_results.jsonl")
+try:
+    shutil.copy(path, mirror)
+    print("mirrored to", mirror)
+except Exception as error:
+    print("mirror failed:", error)
 '''
 
 SETUP = SETUP.replace("__PAYLOAD__", repr(payload))

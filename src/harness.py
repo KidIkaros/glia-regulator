@@ -72,7 +72,7 @@ def prompt_ids(tokenizer, problem, instruction=MATH_INSTR):
     return tokenizer(text, return_tensors="pt").input_ids
 
 
-def greedy_rollout(model, encoded, max_new_tokens, stop_ids, problem=None):
+def greedy_rollout(model, encoded, max_new_tokens, stop_ids, tokenizer=None):
     """Greedy generation; returns (new_token_ids, info).
 
     `info` carries the observable behaviour: how many tokens were produced, whether the
@@ -86,8 +86,10 @@ def greedy_rollout(model, encoded, max_new_tokens, stop_ids, problem=None):
                                 temperature=None, top_p=None, top_k=None,
                                 eos_token_id=stop_ids, pad_token_id=stop_ids[-1])
     new_tokens = output[0, encoded.shape[1]:]
-    text = model.tokenizer.decode(new_tokens, skip_special_tokens=True) \
-        if hasattr(model, "tokenizer") else ""
+    if tokenizer is None:
+        raise ValueError("greedy_rollout needs the tokenizer: the decoded text carries "
+                         "the closed-thinking label, and model.tokenizer does not exist")
+    text = tokenizer.decode(new_tokens, skip_special_tokens=True)
     info = dict(n=int(new_tokens.shape[0]), closed="</think>" in text, chars=len(text),
                 seconds=round(time.time() - started, 1))
     return new_tokens, info

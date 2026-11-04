@@ -84,7 +84,16 @@ switch = {"a": 0.0}
 levers = [DeltaLever(base.model.layers[layer].mlp.down_proj, spec[layer][0],
                      spec[layer][1], lambda: switch["a"]) for layer in spec]
 
-pairs = load_pairs(os.path.join(HERE, "s1_pairs.json"))
+def find_pairs():
+    """The pairs file may sit next to this script or one level up (payload layouts differ)."""
+    for candidate in (os.path.join(HERE, "s1_pairs.json"),
+                      os.path.join(os.path.dirname(HERE), "s1_pairs.json")):
+        if os.path.exists(candidate):
+            return candidate
+    raise FileNotFoundError("s1_pairs.json not found next to the driver or one level up")
+
+
+pairs = load_pairs(find_pairs())
 problem = pairs[0]
 encoded = prompt_ids(tok, problem["problem"]).to(DEVICE)
 stop_ids = eos_token_ids(tok)
@@ -96,7 +105,7 @@ if "fix_reference" in done:
     log("using the recorded reference rollout")
 else:
     log("arm fix_reference: the edited checkpoint's own rollout")
-    tokens, info = greedy_rollout(edited, encoded, ROLLOUT, stop_ids)
+    tokens, info = greedy_rollout(edited, encoded, ROLLOUT, stop_ids, tokenizer=tok)
     reference_tokens = tokens
     record("fix_reference", dict(info=info, token_ids=tokens.tolist(),
                                   diagnostics=diagnostics))
@@ -108,7 +117,7 @@ for alpha in ALPHAS:
         continue
     switch["a"] = alpha
     log(f"arm {arm}: base + lever(alpha={alpha})")
-    tokens, info = greedy_rollout(base, encoded, ROLLOUT, stop_ids)
+    tokens, info = greedy_rollout(base, encoded, ROLLOUT, stop_ids, tokenizer=tok)
     matched = None
     limit = min(len(tokens), len(reference_tokens))
     for index in range(limit):
