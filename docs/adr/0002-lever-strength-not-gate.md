@@ -120,3 +120,57 @@ Consequences:
    projection exactly −1.000000). Building a delta as `−6·proj·d̂` yields the anti-fix.
    Check the convention against the live weights before building a lever from stored
    arrays.
+
+## Second amendment (CPU, 2026-11-03 late session) — the lever IS the fix, for ~875 tokens
+
+Two CPU kernels (no GPU quota; the GPU meter was flat before, during and after) measured
+the lever's fidelity to the weight edit at two granularities.
+
+**1. Teacher-forced dose-response** (`glia-cpu-horizon`): the edited checkpoint and
+base+lever(alpha) were teacher-forced on the SAME 256-token rolling trajectory from the
+base model, and compared at 8 positions inside it.
+
+| alpha | mean KL(target \|\| arm) | argmax agreement |
+|---|---|---|
+| 0.0 (base) | 0.014224 | 1.000 |
+| 0.5 | 0.002932 | 1.000 |
+| **1.0** | **0.000023** | 1.000 |
+| 1.5 | 0.001270 | 1.000 |
+| 2.0 | 0.004485 | 1.000 |
+
+**2. Free-running greedy rollouts** (`glia-cpu-traj`): how many tokens does each arm
+produce that are IDENTICAL to the fix's own greedy rollout?
+
+| arm | tokens matched with the fix (of 1024) |
+|---|---|
+| base (alpha = 0) | 186 |
+| **lever alpha = 1** | **875** |
+| lever alpha = 1.5 | 8 |
+| lever alpha = 2.0 | 8 |
+
+Both measurements agree on the same conclusion, and it is a different one from the
+first amendment's pessimism:
+
+- **alpha = 1 is the unique correct scale.** The KL curve is U-shaped with its minimum
+  there, and the trajectory-fidelity curve peaks there by a factor of ~5 over the base
+  model. Over-correcting (alpha >= 1.5) leaves the fix's trajectory within 8 tokens —
+  it is no longer the fix at all.
+- **The lever IS the fix, to within a chaotic knife-edge, for 875 of 1024 tokens.**
+  So the runtime lever is not a systematically wrong intervention; it is an *approximate*
+  one. The residual disagreements (~1 per 875 tokens) are enough to compound over a
+  16k-token generation and put the trajectory into the loop attractor instead of out of
+  it.
+- **Therefore a runtime (activation-space) lever cannot be expected to reproduce a
+  long-horizon behavioural fix.** Approximation is sufficient for a few hundred tokens
+  and insufficient for sixteen thousand. If the goal is the fix's exact behaviour, the
+  edit has to live in the weights.
+
+This does NOT kill the glial experiment, and the distinction matters: the glial's target
+is not to reproduce the published fix, it is to **suppress the loop when it appears**
+(and to stay out of the way otherwise). Whether the runtime lever has enough authority
+to do that is an empirical question about behaviour, not about fidelity to the fix, and
+it is exactly what the GPU dose-response measures. It is sharpened by the numbers above:
+alpha = 1 is the most faithful setting, alpha > 1 leaves the fix's trajectory
+immediately but may still break the loop (over-removal of the loop direction), so the
+GPU sweep must measure closed-thinking rate AND capability damage per alpha, not just
+fidelity.

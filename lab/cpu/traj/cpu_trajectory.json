@@ -1,0 +1,61 @@
+{
+ "status": "complete",
+ "ref": {
+  "n": 1024,
+  "closed": false,
+  "chars": 2585,
+  "seconds": 281.4
+ },
+ "results": {
+  "base": {
+   "info": {
+    "n": 1024,
+    "closed": false,
+    "chars": 2694,
+    "seconds": 278.5
+   }
+  },
+  "base_vs_fix": {
+   "info": {
+    "n": 1024,
+    "closed": false,
+    "chars": 2694,
+    "seconds": 278.5
+   },
+   "matched_prefix": 186,
+   "identical_to_fix": false
+  },
+  "lever_alpha1": {
+   "info": {
+    "n": 1024,
+    "closed": false,
+    "chars": 2544,
+    "seconds": 277.6
+   },
+   "matched_prefix": 875,
+   "identical_to_fix": false
+  },
+  "lever_alpha1.5": {
+   "info": {
+    "n": 1024,
+    "closed": false,
+    "chars": 2914,
+    "seconds": 274.5
+   },
+   "matched_prefix": 8,
+   "identical_to_fix": false
+  },
+  "lever_alpha2": {
+   "info": {
+    "n": 1024,
+    "closed": false,
+    "chars": 2779,
+    "seconds": 277.2
+   },
+   "matched_prefix": 8,
+   "identical_to_fix": false
+  }
+ },
+ "rollout_requested": 1024,
+ "prompt_tokens": 75
+}

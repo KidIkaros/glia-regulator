@@ -1,0 +1,20 @@
+cpu kernel: installing pinned deps
+device: cpu | threads: 4
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[traj 19s] loading base
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<03:51,  1.38it/s]Loading weights:  79%|ââââââââ  | 254/320 [00:00<00:00, 415.99it/s]Loading weights: 100%|ââââââââââ| 320/320 [00:00<00:00, 326.29it/s]
+loaded Qwen/Qwen3.5-0.8B with attn_implementation=eager
+[traj 46s] loading edited
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<04:41,  1.13it/s]Loading weights:  76%|ââââââââ  | 244/320 [00:00<00:00, 335.19it/s]Loading weights: 100%|ââââââââââ| 320/320 [00:01<00:00, 289.95it/s]
+loaded RikiyaT/Qwen3.5-0.8B-weight-space-programming with attn_implementation=eager
+[lever] L15: 62 columns, min cos 0.999969, implied strength -6.002
+[lever] L19: 63 columns, min cos 0.999968, implied strength -6.001
+[traj 60s] prompt 75 tokens; rollout 1024
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[traj 342s] reference (edited checkpoint): {'n': 1024, 'closed': False, 'chars': 2585, 'seconds': 281.4}
+[traj 620s] control (base model): {'n': 1024, 'closed': False, 'chars': 2694, 'seconds': 278.5}
+[traj 620s] base_vs_fix: matched 186 tokens before differing (ref len 1024, arm len 1024)
+[traj 898s] lever_alpha1: matched 875 tokens before differing (ref len 1024, arm len 1024)
