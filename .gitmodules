@@ -1,0 +1,3 @@
+[submodule "vendor/neuron-lens"]
+	path = vendor/neuron-lens
+	url = https://github.com/stdlogits/neuron-lens
