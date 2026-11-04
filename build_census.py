@@ -1,4 +1,4 @@
-"""Build the lever-equivalence kernel (GPU, id mauricew/glia-lever-v2). ~20 min quota."""
+"""Build the lever-equivalence kernel (GPU, id mauricew/glia-lever-v3). ~20 min quota."""
 import base64
 import json
 import os
@@ -40,16 +40,16 @@ print("device:", "cuda" if torch.cuda.is_available() else "cpu", flush=True)
 subprocess.run([sys.executable, os.path.join(root, "src", "lever_v2.py")],
                check=True, env=dict(os.environ, OUT_DIR="/kaggle/working",
                                     PYTHONPATH=os.path.join(root, "src"),
-                                    N_PROBLEMS="2", MAX_NEW="8192"))
+                                    N_PROBLEMS="2", MAX_NEW="16384"))
 '''
 
 src = MAIN.replace("__PAYLOAD__", repr(payload))
-out_dir = os.path.join(ROOT, "kernel_v2")
+out_dir = os.path.join(ROOT, "kernel_v3")
 os.makedirs(out_dir, exist_ok=True)
 open(os.path.join(out_dir, "main.py"), "w").write(src)
 py_compile.compile(os.path.join(out_dir, "main.py"), doraise=True)
 
-kid = os.environ.get("KAGGLE_KERNEL_ID", "mauricew/glia-lever-v2")
+kid = os.environ.get("KAGGLE_KERNEL_ID", "mauricew/glia-lever-v3")
 meta = {"id": kid, "title": kid.split("/")[-1], "code_file": "main.py",
         "language": "python", "kernel_type": "script",
         "enable_gpu": True, "enable_internet": True, "is_private": True,

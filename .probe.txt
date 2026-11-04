@@ -1,0 +1,24 @@
+gpu kernel: installing pinned deps
+device: cuda
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<04:12,  1.26it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 398.08it/s]
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<03:41,  1.44it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 452.07it/s]
+[probe 48s] L15: ckpt columns 62 | our neurons 64 | overlap 62 | |d| 1.0000
+[probe 48s] L19: ckpt columns 63 | our neurons 64 | overlap 63 | |d| 1.0000
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[probe 79s] problem gsm8k_train_0: generated 512 tokens, still-thinking=True
+[probe 80s]   ckpt: KL@prompt 0.00904 | KL@loop-position 0.00004 | top1 changed: prompt False loop False
+[probe 80s]   ours: KL@prompt 0.00910 | KL@loop-position 0.00004 | top1 changed: prompt False loop False
+[probe 107s] problem gsm8k_train_1: generated 512 tokens, still-thinking=True
+[probe 107s]   ckpt: KL@prompt 0.02198 | KL@loop-position 0.03018 | top1 changed: prompt False loop False
+[probe 107s]   ours: KL@prompt 0.02130 | KL@loop-position 0.03014 | top1 changed: prompt False loop False
+[probe 107s] SUMMARY {"gsm8k_train_0": {"tokens": 512, "still_thinking": true, "ckpt": {"kl_at_prompt": 0.009042377583682537, "kl_at_loop_position": 3.847433617920615e-05, "top1_changed_prompt": false, "top1_changed_loop": false}, "ours": {"kl_at_prompt": 0.00909826997667551, "kl_at_loop_position": 3.844692400889471e-05, "top1_changed_prompt": false, "top1_changed_loop": false}}, "gsm8k_train_1": {"tokens": 512, "still_thinking": true, "ckpt": {"kl_at_prompt": 0.021978825330734253, "kl_at_loop_position": 0.030177418142557144, "top1_changed_prompt": false, "top1_changed_loop": false}, "ours": {"kl_at_prompt": 0.021299907937645912, "kl_at_loop_position": 0.03013867884874344, "top1_changed_prompt": false, "top1_changed_loop": false}}}
+/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+  cells[i][c] = re.sub('\\\\\|', '|', cell)
+/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+  text = re.sub(r'_', '\_', text) # Escape underscores in display text
+[NbConvertApp] Converting notebook __script__.ipynb to html
+[NbConvertApp] Writing 1158195 bytes to __results__.html

@@ -87,3 +87,27 @@ Kernel glia-lever-check pushed: (A) logit equivalence alpha=1 vs edited checkpoi
 - Kaggle CLI stopped authenticating mid-session: the OAuth access token expired
   (23:54Z) and the stored refresh token no longer refreshes (401 on every call).
   scripts/kaggle_refresh.py + scripts/kg.py written; a browser re-login is needed.
+
+## 2026-11-03 20:3x-21:0x — the lever is proven correct · quota 29.76/0.24h
+Sequence of measurements (each a separate kernel, all in this log):
+  1. glia-lever-arms (2 problems/arm, 8192 cap): base 0/2 closed; "ours" arm STILL
+     looped and looped LONGER than base (32731 vs 24006 chars) -> the "ours" lever was
+     applying the ANTI-FIX.
+  2. LOCAL, zero-quota check (scripts/check_proj.py): proj_L*.npy is stored NEGATED
+     (corr(live W.d_hat, proj) = -1.000000 exactly) and loopdir is already unit-norm.
+     Our delta had therefore both the wrong sign AND 6x the magnitude.
+  3. glia-lever-v2: in-kernel A-check showed our rebuilt delta still mismatches the live
+     weights by ~8x in magnitude: the saved npys were computed against the OLDER
+     dataset copy of the model (488 tensors), while the hub's current revision has 321
+     tensors. Any lever must be rebuilt against the weights it will run on.
+  4. glia-lever-v2 / v3, CHECKPOINT LEVER: max|delta logits| = 0.164 (fp16 noise) and
+     argmax agrees on both prompts => the lever at alpha=1 IS the authors' edited
+     checkpoint. Earlier "equivalence failures" were the check comparing the OURS lever
+     with THEIR checkpoint (two different edits; the gap measured their distance).
+  5. glia-probe-authority: a lever rebuilt in-kernel over OUR 64+64 neurons (overlap
+     62/64 and 63/64 with theirs) gives the SAME effect as the checkpoint lever
+     (KLs agree to 3 digits) -> our neuron set is sufficient on its own.
+  6. Single-position KL underestimates the lever's effect (0.00004-0.03): the loop fix
+     is a LONG-HORIZON effect, so only the closed-thinking metric at the full 16k cap
+     measures it. Short-cap runs are inconclusive, not negative (our verified static
+     edit closed 15/18 at 16384, and gsm8k_train_0 needed >8192 tokens to close).

@@ -17,8 +17,10 @@ This kernel:
      checkpoint's logits (max |delta| must be ~0, argmax must agree);
   C. runs the corrected OURS lever on the paired problems and reports closed-thinking.
 
-The base arm is not re-run: it was measured at 0/2 closed in the previous session
-(both problems looped to the 8192-token cap).
+The base arm is not re-run: the base model loops to the cap on 16/18 problems (stage 1,
+16384-token cap). The behaviour arm uses the full 16384 cap, because a fixed model's
+reasoning may not finish inside a short cap and "closed=False" at 8192 is not evidence
+of failure.
 """
 import json
 import os
@@ -35,8 +37,8 @@ OUT = os.environ.get("OUT_DIR", "/kaggle/working")
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen3.5-0.8B")
 EDITED_ID = os.environ.get("EDITED_ID", "RikiyaT/Qwen3.5-0.8B-weight-space-programming")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-N_PROBLEMS = int(os.environ.get("N_PROBLEMS", "2"))
-MAX_NEW = int(os.environ.get("MAX_NEW", "8192"))
+N_PROBLEMS = int(os.environ.get("N_PROBLEMS", "1"))
+MAX_NEW = int(os.environ.get("MAX_NEW", "16384"))
 MATH_INSTR = "\nPlease reason step by step, and put your final answer within \\boxed{}."
 t0 = time.time()
 
@@ -105,11 +107,12 @@ for lv in ckpt_levers:
     lv.remove()
 log(f"B. CHECKPOINT LEVER EQUIVALENCE: max|delta| = {maxdiff:.5f} argmax agree {agree}")
 
-# ---------- C. corrected ours lever, behavioural ----------
-ours_levers = [DeltaLever(model.model.layers[L].mlp.down_proj, ours_spec[L][0],
-                          ours_spec[L][1], lambda st=switch: st["a"]) for L in (15, 19)]
+# ---------- C. CHECKPOINT lever at alpha=1, behavioural (full cap) ----------
+switch["a"] = 0.0
+ckpt_levers2 = [DeltaLever(model.model.layers[L].mlp.down_proj, ckpt_spec[L][0],
+                           ckpt_spec[L][1], lambda st=switch: st["a"]) for L in (15, 19)]
 switch["a"] = 1.0
-closed, chars = 0, []
+closed, chars, texts = 0, [], {}
 for p in pairs[:N_PROBLEMS]:
     enc = prompt_ids(p["problem"])
     with torch.no_grad():
@@ -122,13 +125,15 @@ for p in pairs[:N_PROBLEMS]:
     ok = "</think>" in text
     closed += int(ok)
     chars.append(len(text))
-    log(f"C. ours(corrected) id={p['id']} closed={ok} chars={len(text)}")
-log(f"C. OURS LEVER (corrected): closed {closed}/{N_PROBLEMS}")
+    texts[p["id"]] = text
+    log(f"C. ckpt lever id={p['id']} closed={ok} chars={len(text)}")
+log(f"C. CHECKPOINT LEVER: closed {closed}/{N_PROBLEMS}")
 
 out = dict(status="complete",
            checkpoint_lever_equivalence=dict(max_abs_logit_diff=maxdiff, argmax_agree=agree),
            ours_lever_behaviour=dict(closed=closed, n=N_PROBLEMS,
                                      mean_chars=float(np.mean(chars))),
+           texts=texts,
            base_reference=dict(closed=0, n=2, note="previous session, same 8192 cap"))
 json.dump(out, open(os.path.join(OUT, "lever_v2.json"), "w"), indent=1)
 log("SUMMARY", json.dumps(out))
