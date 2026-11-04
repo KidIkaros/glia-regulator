@@ -73,24 +73,32 @@ def prompt_ids(tokenizer, problem, instruction=MATH_INSTR):
 
 
 class PresencePenalty:
-    """OpenAI-style presence penalty: subtract `penalty` once per token already emitted.
+    """The reference protocol's presence penalty, matching the published driver exactly.
 
-    The reference protocol for this project (the published weight-space work and our own
-    stage-2 replication) applied a presence penalty of 1.5 to EVERY arm, base and fixed
-    alike. An arm run without it is not protocol-matched, and the closed-thinking label
-    cannot be compared against the published numbers.
+    The published work and our own stage-2 replication applied a presence penalty of
+    1.5 to EVERY arm, base and fixed alike: subtract `penalty` once per UNIQUE token
+    already GENERATED (the prompt is not penalised). An arm run without it is not
+    protocol-matched and its closed-thinking label cannot be compared with the published
+    numbers.
+
+    This mirrors src/driver2.py's PresencePenalty verbatim - including using torch.unique
+    rather than a Python set, which is the difference between O(unique) on the GPU and
+    O(n) in the interpreter (the first version looped in Python and made a 16k-token
+    generation take hours).
     """
 
-    def __init__(self, penalty: float):
+    def __init__(self, prompt_lengths, penalty: float):
+        self.prompt_lengths = prompt_lengths
         self.penalty = penalty
-        self.seen = set()
 
     def __call__(self, input_ids, scores):
         import torch
-        if self.penalty <= 0 or not self.seen:
+        if self.penalty <= 0:
             return scores
-        for token in self.seen:
-            scores[:, token] -= self.penalty
+        for row in range(input_ids.shape[0]):
+            generated = input_ids[row, self.prompt_lengths[row]:]
+            if generated.numel():
+                scores[row, torch.unique(generated)] -= self.penalty
         return scores
 
 
@@ -107,8 +115,9 @@ def greedy_rollout(model, encoded, max_new_tokens, stop_ids, tokenizer=None,
     kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False, temperature=None,
                   top_p=None, top_k=None, eos_token_id=stop_ids, pad_token_id=stop_ids[-1])
     if presence_penalty and presence_penalty > 0:
-        processor = PresencePenalty(presence_penalty)
-        kwargs["logits_processor"] = [processor]
+        # the prompt is excluded from the penalty (see the class docstring)
+        prompt_lengths = [encoded.shape[1]] * encoded.shape[0]
+        kwargs["logits_processor"] = [PresencePenalty(prompt_lengths, presence_penalty)]
     with torch.no_grad():
         output = model.generate(encoded, **kwargs)
     new_tokens = output[0, encoded.shape[1]:]

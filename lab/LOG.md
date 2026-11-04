@@ -165,3 +165,30 @@ moved to Colab. Two routes tried:
       argument and a missing one raises instead of returning silence.
 Colab PRO tier confirmed (priority GPUs, longer sessions). If the CLI exposes H100/A100
 on this tier, Modal's H200 allowance becomes unnecessary for this project.
+
+## 2026-11-04 02:3x-06:4x — THE RESULT: the runtime lever CAN break the loop (alpha=1.5)
+Colab T4 (via the official CLI, headless), fp32, greedy, presence penalty 1.5 on every
+arm (the reference protocol), gsm8k_train_0, 8192-token cap:
+  fix reference (authors' checkpoint): 6,320 tokens, 18,340 chars, CLOSED
+  lever alpha=1   : 8,192 tokens (cap), 26,429 chars, NOT closed, matched fix 546 tokens
+  lever alpha=1.5 : 1,838 tokens, 4,881 chars, CLOSED, matched fix 8 tokens
+=> (1) the runtime lever has enough authority to break the reasoning loop, and closes it
+   FASTER than the published weight edit (4,881 vs 18,340 chars);
+   (2) the fidelity optimum (alpha=1) is NOT the behavioural optimum - alpha=1.5 is the
+       least faithful setting (8-token trajectory match) and the one that works;
+   (3) mechanism: the edit removes the direction once, permanently, at strength 6; the
+       lever applies a partial correction per step, so matching the edit's local
+       predictions does not match its cumulative effect - the lever needs a bigger
+       per-step push than the edit itself.
+=> the glial's premise survives: there is a lever with demonstrated authority over the
+   behaviour, so the open question is WHEN to apply it (a context-reading alpha(t)).
+   The binding constraint is now the capability panel: alpha=1.5 removes 9x the loop
+   direction, so the dose-response must map closed-thinking rate against capability
+   damage before alpha(t) is trained on it.
+Pipeline lessons (all now in the repo): the Colab CLI's exec has an internal ~20 min
+reply ceiling and a disconnected client ABORTS the cell, so arms must be chunked (one
+arm per invocation, MAX_ARMS_PER_RUN) with the results file making each invocation
+resume; the presence penalty must be the published implementation (unique GENERATED
+tokens, prompt excluded) or a 16k generation takes hours; and `colab upload` writes to
+the Jupyter contents root, not the VM filesystem, so the payload travels inline over
+stdin.

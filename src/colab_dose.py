@@ -101,6 +101,12 @@ encoded = prompt_ids(tok, problem["problem"]).to(DEVICE)
 stop_ids = eos_token_ids(tok)
 log(f"problem {problem['id']}; prompt {encoded.shape[1]} tokens")
 
+# The Colab CLI's exec has an internal reply deadline (~20 min) and a disconnected
+# client ABORTS the cell, so a long multi-arm cell loses everything it had not yet
+# written. One arm per invocation keeps each cell short, and the results file makes
+# the next invocation resume where this one stopped.
+MAX_ARMS_PER_RUN = int(os.environ.get("MAX_ARMS_PER_RUN", "1"))
+
 reference_tokens = None
 if "fix_reference" in done:
     reference_tokens = torch.tensor(done["fix_reference"]["token_ids"], device=DEVICE)
@@ -113,7 +119,12 @@ else:
     record("fix_reference", dict(info=info, token_ids=tokens.tolist(),
                                   diagnostics=diagnostics))
 
+arms_done = 0
 for alpha in ALPHAS:
+    if arms_done >= MAX_ARMS_PER_RUN:
+        log(f"arm budget for this invocation reached ({MAX_ARMS_PER_RUN}); stopping so the "
+            "cell stays short - run the script again to continue")
+        break
     arm = f"lever_alpha{alpha:g}".replace(".", "_")
     if arm in done:
         log(f"arm {arm} already recorded - skipping")
@@ -131,6 +142,7 @@ for alpha in ALPHAS:
     record(arm, dict(info=info, matched_prefix=matched,
                      identical_to_fix=matched is None and len(tokens) == len(reference_tokens),
                      token_ids=tokens.tolist()))
+    arms_done += 1
     log(f"arm {arm}: matched {matched} tokens with the fix "
         f"(arm {len(tokens)} tokens, fix {len(reference_tokens)} tokens) | closed={info['closed']}")
 

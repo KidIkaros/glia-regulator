@@ -191,3 +191,27 @@ closed-thinking label from that run is void. The lesson generalises: a behaviour
 metric is only comparable against numbers produced under the same protocol, and
 "our version of the fix also fails" is the first thing to check when a comparison
 disagrees with a published result.
+
+## Fourth amendment (2026-11-04) — calibrate on behaviour, not on fidelity
+
+With the reference protocol applied (presence penalty 1.5 on every arm), the picture
+inverts the earlier reading:
+
+| arm | tokens | characters | closed? | matched the fix's trajectory |
+|---|---|---|---|---|
+| fix reference | 6,320 | 18,340 | yes | - |
+| lever alpha=1 | 8,192 (cap) | 26,429 | **no** | 546 |
+| lever alpha=1.5 | 1,838 | 4,881 | **yes** | 8 |
+
+alpha=1 is the most *faithful* setting (lowest KL to the fix, longest trajectory
+match) and the one that **fails** to break the loop; alpha=1.5 is the least faithful
+(matches the fix's trajectory for 8 tokens) and the one that **closes the loop faster
+than the published edit does**.
+
+The mechanism: the weight edit removes the loop direction once, permanently, at strength
+6; the runtime lever applies a *partial* correction to each step's write. Matching the
+edit's local predictions does not match its cumulative effect over thousands of steps,
+so the lever needs a larger per-step push than the edit itself. Consequence for the
+design: **alpha(t) must be calibrated against behaviour (closed-thinking rate and
+capability damage), never against similarity to a reference edit.** The static edit is
+a source of mechanism, not a target to imitate.

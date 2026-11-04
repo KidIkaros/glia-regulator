@@ -1,0 +1,37 @@
+{
+ "protocol": {
+  "platform": "Colab T4 via google-colab-cli",
+  "dtype": "fp32",
+  "greedy": true,
+  "presence_penalty": 1.5,
+  "rollout_cap": 8192,
+  "problem": "gsm8k_train_0",
+  "note": "presence penalty 1.5 on every arm, matching the published protocol"
+ },
+ "arms": [
+  {
+   "arm": "fix_reference",
+   "n": 6320,
+   "chars": 18340,
+   "closed": true,
+   "seconds": 311.9,
+   "matched_prefix": null
+  },
+  {
+   "arm": "lever_alpha1",
+   "n": 8192,
+   "chars": 26429,
+   "closed": false,
+   "seconds": 409.9,
+   "matched_prefix": 546
+  },
+  {
+   "arm": "lever_alpha1_5",
+   "n": 1838,
+   "chars": 4881,
+   "closed": true,
+   "seconds": 91.1,
+   "matched_prefix": 8
+  }
+ ]
+}

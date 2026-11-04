@@ -162,3 +162,48 @@ This is worth stating plainly: two of the numbers that look like findings in the
 un-penalised run (the fix "not closing", the lever "not closing") are protocol
 artefacts, not results. The fidelity numbers (875, 8) are unaffected - both arms
 receive the same treatment - and they are the ones that replicate.
+
+## 7. The behavioural optimum is NOT the fidelity optimum (the night's result)
+
+Protocol-matched on Colab (T4, fp32, greedy, **presence penalty 1.5 on every arm**),
+on `gsm8k_train_0`, 8192-token cap:
+
+| arm | tokens generated | characters | closed its thinking? | matched the fix's trajectory |
+|---|---|---|---|---|
+| fix reference (the authors' edited checkpoint) | 6,320 | 18,340 | **yes** | — |
+| lever alpha=1 | 8,192 (cap) | 26,429 | **no** | 546 |
+| **lever alpha=1.5** | 1,838 | 4,881 | **yes** | 8 |
+
+Three things fall out of this, and they matter more than any of the earlier numbers:
+
+1. **The runtime lever CAN suppress the reasoning loop.** At alpha=1.5 the lever closes
+   the model's thinking after 1,838 tokens - and *faster than the published weight edit
+   does* (4,881 vs 18,340 characters). The mechanism that was in doubt - whether a
+   per-token runtime intervention has enough authority to break a long-horizon chaotic
+   attractor - is answered **yes**, and the glial's premise survives.
+2. **The fidelity optimum and the behavioural optimum are different points.** alpha=1
+   reproduces the weight edit's *predictions* best (KL 2.3e-5, and a 875-token
+   trajectory match in the un-penalised protocol), yet it is the arm that does **not**
+   close the loop. alpha=1.5 leaves the fix's trajectory within 8 tokens and is the arm
+   that does. A regulator must be calibrated on behaviour, not on similarity to a
+   reference intervention.
+3. **Why over-correction is the right direction.** The weight edit removes the loop
+   direction *permanently* (strength 6 on every column, once); the runtime lever applies
+   a *partial* correction to each step's write. Matching the edit's local predictions
+   therefore does not match its cumulative effect over thousands of steps - and the
+   lever needs a larger per-step push than the edit does to reach the same behavioural
+   outcome. This is the same mechanism as the fidelity horizon, seen from the other
+   side.
+
+### What this unblocks, and what it does not
+
+- It unblocks the glial experiment: there is now a lever with demonstrated authority
+  over the behaviour, so the open question becomes *when* to apply it (a context-reading
+  alpha(t)), not *whether* a runtime intervention can work at all.
+- It does **not** establish that alpha=1.5 is safe: alpha=1.5 removes 9x the loop
+  direction instead of 6x. The capability panel (perplexity, language mixing, ordinary
+  prompts) is now the binding constraint, and the dose-response must map closed-thinking
+  rate against capability damage before alpha(t) is trained on it.
+- The dose-response is still coarse: one problem, two alphas. The next sweep is
+  alpha in {1.0, 1.25, 1.5, 1.75, 2.0} across the 18 paired problems, with the
+  capability panel attached.
