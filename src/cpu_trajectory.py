@@ -36,9 +36,11 @@ import torch
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
-sys.modules.setdefault("fla", None)      # no Triton kernels on CPU -> pure-torch path
-
+from harness import (block_triton_kernels, eos_token_ids, greedy_rollout, load_model,
+                     load_pairs, prompt_ids)
 from lever import DeltaLever, build_lever_from_checkpoints
+
+block_triton_kernels()
 
 OUT = os.environ.get("OUT_DIR", "/kaggle/working")
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen3.5-0.8B")
@@ -67,57 +69,25 @@ def deadline_guard():
 
 threading.Thread(target=deadline_guard, daemon=True).start()
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-tok = AutoTokenizer.from_pretrained(MODEL_ID)
 torch.set_num_threads(int(os.environ.get("N_THREADS", "4")))
-
-
-def load_cpu(model_id):
-    last = None
-    for impl in ("eager", "sdpa"):
-        try:
-            m = AutoModelForCausalLM.from_pretrained(model_id, dtype=torch.float32,
-                                                      attn_implementation=impl)
-            print(f"loaded {model_id} with attn_implementation={impl}", flush=True)
-            return m
-        except Exception as e:                       # noqa: BLE001
-            last = e
-            print(f"{impl} failed: {type(e).__name__}: {str(e)[:140]}", flush=True)
-    raise last
-
-
 log("loading base")
-base = load_cpu(MODEL_ID)
+base, tok = load_model(MODEL_ID, device="cpu")
 log("loading edited")
-edited = load_cpu(EDITED_ID)
-pairs = json.load(open(os.path.join(ROOT, "s1_pairs.json")))["pairs"]
+edited, _ = load_model(EDITED_ID, device="cpu")
+pairs = load_pairs(os.path.join(ROOT, "s1_pairs.json"))
 switch = {"a": 0.0}
-spec = build_lever_from_checkpoints(base, edited, layers=(15, 19), validate=True)
+spec, lever_diagnostics = build_lever_from_checkpoints(base, edited)
 levers = [DeltaLever(base.model.layers[L].mlp.down_proj, spec[L][0], spec[L][1],
                      lambda st=switch: st["a"]) for L in (15, 19)]
 
 problem = pairs[0]
-txt = tok.apply_chat_template(
-    [{"role": "user", "content": problem["problem"] + MATH_INSTR}], tokenize=False,
-    add_generation_prompt=True, enable_thinking=True)
-enc = tok(txt, return_tensors="pt").input_ids
-log(f"prompt {enc.shape[1]} tokens; rollout {ROLLOUT}")
+encoded = prompt_ids(tok, problem["problem"])
+stop_ids = eos_token_ids(tok)
+log(f"prompt {encoded.shape[1]} tokens; rollout {ROLLOUT}")
 
 
 def rollout(model):
-    t = time.time()
-    with torch.no_grad():
-        out = model.generate(enc, max_new_tokens=ROLLOUT, do_sample=False,
-                             temperature=None, top_p=None, top_k=None,
-                             eos_token_id=[tok.convert_tokens_to_ids("<|im_end|>"),
-                                           tok.eos_token_id],
-                             pad_token_id=tok.eos_token_id)
-    gen = out[0, enc.shape[1]:]
-    txt_out = tok.decode(gen, skip_special_tokens=True)
-    closed = "</think>" in txt_out
-    return gen, dict(n=int(gen.shape[0]), closed=bool(closed),
-                     chars=len(txt_out), seconds=round(time.time() - t, 1))
+    return greedy_rollout(model, encoded, ROLLOUT, stop_ids)
 
 
 # reference: the fix's own behaviour
@@ -126,9 +96,6 @@ ref_tokens, ref_info = rollout(edited)
 log(f"reference (edited checkpoint): {ref_info}")
 
 RESULTS = {}
-base_tokens, base_info = rollout(base)
-log(f"control (base model): {base_info}")
-RESULTS["base"] = dict(info=base_info)
 
 
 def compare(name, toks, info):
@@ -148,13 +115,21 @@ def compare(name, toks, info):
 
 compare("base_vs_fix", base_tokens, base_info)
 
+
 for alpha in ALPHAS:
     switch["a"] = alpha
     toks, info = rollout(base)
     compare(f"lever_alpha{alpha:g}", toks, info)
 
+# the base control runs LAST: it is the least informative arm, and on a 16k-token
+# rollout it is the one that should be sacrificed if the deadline arrives first
+if os.environ.get("BASE_CONTROL", "1") == "1":
+    base_tokens, base_info = rollout(base)
+    log(f"control (base model): {base_info}")
+    compare("base_vs_fix", base_tokens, base_info)
+
 switch["a"] = 0.0
-json.dump(dict(status="complete", ref=ref_info, results=RESULTS,
-               rollout_requested=ROLLOUT, prompt_tokens=int(enc.shape[1])),
+json.dump(dict(status="complete", ref=ref_info, lever=lever_diagnostics, results=RESULTS,
+               rollout_requested=ROLLOUT, prompt_tokens=int(encoded.shape[1])),
           open(os.path.join(OUT, "cpu_trajectory.json"), "w"), indent=1)
 log("SUMMARY", json.dumps({k: v.get("matched_prefix") for k, v in RESULTS.items()}))

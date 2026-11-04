@@ -36,7 +36,11 @@ import torch
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
+from harness import (block_triton_kernels, eos_token_ids, greedy_rollout, load_model,
+                     load_pairs, prompt_ids)
 from lever import DeltaLever, build_lever_from_checkpoints
+
+block_triton_kernels()
 
 OUT = os.environ.get("OUT_DIR", "/kaggle/working")
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen3.5-0.8B")
@@ -45,7 +49,6 @@ N_PROBLEMS = int(os.environ.get("N_PROBLEMS", "4"))
 MAX_NEW = int(os.environ.get("MAX_NEW", "16384"))
 DEADLINE_S = int(os.environ.get("DEADLINE_S", "5400"))
 ALPHAS = [float(a) for a in os.environ.get("ALPHAS", "0 0.5 1.0 1.5 2.0").split()]
-MATH_INSTR = "\nPlease reason step by step, and put your final answer within \\boxed{}."
 t0 = time.time()
 
 
@@ -61,25 +64,20 @@ def deadline_guard():
 
 threading.Thread(target=deadline_guard, daemon=True).start()
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-tok = AutoTokenizer.from_pretrained(MODEL_ID)
-model = AutoModelForCausalLM.from_pretrained(MODEL_ID, dtype=torch.float16).cuda().eval()
-edited = AutoModelForCausalLM.from_pretrained(EDITED_ID, dtype=torch.float16).cuda().eval()
-pairs = json.load(open(os.path.join(ROOT, "s1_pairs.json")))["pairs"]
+DEVICE = os.environ.get("DEVICE", "cuda")            # "cuda" | "cpu"
+DTYPE = torch.float16 if DEVICE == "cuda" else torch.float32
+model, tok = load_model(MODEL_ID, device=DEVICE, dtype=DTYPE)
+edited, _ = load_model(EDITED_ID, device=DEVICE, dtype=DTYPE)
+log(f"device={DEVICE} dtype={DTYPE}")
+pairs = load_pairs(os.path.join(ROOT, "s1_pairs.json"))
 switch = {"a": 0.0}
 
 # ---------------- derive the lever in-kernel and validate it ----------------
-spec = build_lever_from_checkpoints(model, edited, layers=(15, 19), validate=True)
-levers = [DeltaLever(model.model.layers[L].mlp.down_proj, spec[L][0], spec[L][1],
-                     lambda st=switch: st["a"]) for L in (15, 19)]
+spec, lever_diagnostics = build_lever_from_checkpoints(model, edited)
+levers = [DeltaLever(model.model.layers[layer].mlp.down_proj, spec[layer][0],
+                     spec[layer][1], lambda: switch["a"]) for layer in spec]
 
 
-def prompt_ids(problem):
-    txt = tok.apply_chat_template(
-        [{"role": "user", "content": problem + MATH_INSTR}], tokenize=False,
-        add_generation_prompt=True, enable_thinking=True)
-    return tok(txt, return_tensors="pt").input_ids.cuda()
 
 
 results_path = os.path.join(OUT, "dose_response.jsonl")
@@ -95,7 +93,7 @@ def flush():
 for pi, p in enumerate(pairs[:N_PROBLEMS]):
     for alpha in ALPHAS:
         switch["a"] = alpha
-        enc = prompt_ids(p["problem"])
+        enc = prompt_ids(tok, p["problem"]).to(DEVICE)
         with torch.no_grad():
             out = model.generate(enc, max_new_tokens=MAX_NEW, do_sample=False,
                                  temperature=None, top_p=None, top_k=None,

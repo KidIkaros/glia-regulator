@@ -1,0 +1,39 @@
+mauricew/glia-dose-smoke (cpu): installing pinned deps
+device: cpu
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:01<05:29,  1.03s/it]Loading weights: 100%|██████████| 320/320 [00:01<00:00, 289.40it/s]
+loaded Qwen/Qwen3.5-0.8B on cpu (torch.float32) with attn_implementation=eager
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:01<06:26,  1.21s/it]Loading weights: 100%|██████████| 320/320 [00:01<00:00, 260.45it/s]
+loaded RikiyaT/Qwen3.5-0.8B-weight-space-programming on cpu (torch.float32) with attn_implementation=eager
+[dose 68s] device=cpu dtype=torch.float32
+[lever] L15: 62 columns, min cos 0.999969, implied strength -6.002
+[lever] L19: 63 columns, min cos 0.999968, implied strength -6.001
+Traceback (most recent call last):
+  File "/tmp/glia_work/src/dose_response.py", line 102, in <module>
+    enc = prompt_ids(p["problem"])
+  File "/tmp/glia_work/src/dose_response.py", line 86, in prompt_ids
+    return tok(txt, return_tensors="pt").input_ids.cuda()
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/local/lib/python3.13/dist-packages/torch/cuda/__init__.py", line 471, in _lazy_init
+    raise AssertionError("Torch not compiled with CUDA enabled")
+AssertionError: Torch not compiled with CUDA enabled
+Traceback (most recent call last):
+  File "/kaggle/src/script.py", line 17, in <module>
+    subprocess.run([sys.executable, os.path.join(root, "src/dose_response.py")],
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                   check=True, env=dict(os.environ, OUT_DIR="/kaggle/working",
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                        PYTHONPATH=os.path.join(root, "src"),
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                        ALPHAS="0 1.0", DEADLINE_S="900", DEVICE="cpu", MAX_NEW="64", N_PROBLEMS="1"))
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/usr/bin/python3', '/tmp/glia_work/src/dose_response.py']' returned non-zero exit status 1.
+/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+  cells[i][c] = re.sub('\\\\\|', '|', cell)
+/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+  text = re.sub(r'_', '\_', text) # Escape underscores in display text
+[NbConvertApp] Converting notebook __script__.ipynb to html
+[NbConvertApp] Writing 1140445 bytes to __results__.html

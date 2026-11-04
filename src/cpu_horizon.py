@@ -41,7 +41,11 @@ import torch
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
+from harness import (block_triton_kernels, eos_token_ids, greedy_rollout, load_model,
+                     load_pairs, prompt_ids)
 from lever import DeltaLever, build_lever_from_checkpoints
+
+block_triton_kernels()
 
 OUT = os.environ.get("OUT_DIR", "/kaggle/working")
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen3.5-0.8B")
@@ -71,51 +75,17 @@ def deadline_guard():
 
 threading.Thread(target=deadline_guard, daemon=True).start()
 
-# Qwen3.5's gated-delta-rule layers use flash-linear-attention's TRITON kernels when
-# the `fla` package is importable; Triton cannot launch on CPU tensors. Blocking the
-# import makes transformers fall back to its pure-torch path (the decorator checks
-# importlib.import_module("fla") at import time). Kaggle CPU images have no fla, so this
-# is belt-and-braces; locally it makes the CPU path testable at all.
-sys.modules.setdefault("fla", None)
-
-from transformers import AutoTokenizer
-
-tok = AutoTokenizer.from_pretrained(MODEL_ID)
-
-
-def load_cpu(model_id, **kw):
-    """Load on CPU with a pure-PyTorch attention path.
-
-    Qwen3.5's linear-attention layers dispatch to Triton kernels when
-    flash-linear-attention is importable; Triton cannot launch on CPU tensors
-    ("Pointer argument cannot be accessed from Triton (cpu tensor?)"). CPU kernels
-    have no GPU, so we force the eager (pure torch) implementation explicitly.
-    """
-    from transformers import AutoModelForCausalLM
-    last = None
-    for impl in ("eager", "sdpa"):
-        try:
-            m = AutoModelForCausalLM.from_pretrained(model_id, dtype=torch.float32,
-                                                      attn_implementation=impl, **kw)
-            print(f"loaded with attn_implementation={impl}", flush=True)
-            return m
-        except Exception as e:                       # noqa: BLE001
-            last = e
-            print(f"attn_implementation={impl} failed: {type(e).__name__}: {str(e)[:160]}",
-                  flush=True)
-    raise last
-
-log("loading base on CPU")
-base = load_cpu(MODEL_ID)
-log("loading edited checkpoint on CPU")
-edited = load_cpu(EDITED_ID)
 torch.set_num_threads(int(os.environ.get("N_THREADS", "4")))
+log("loading base")
+base, tok = load_model(MODEL_ID, device="cpu")
+log("loading edited checkpoint")
+edited, _ = load_model(EDITED_ID, device="cpu")
 
-pairs = json.load(open(os.path.join(ROOT, "s1_pairs.json")))["pairs"]
+pairs = load_pairs(os.path.join(ROOT, "s1_pairs.json"))
 switch = {"a": 0.0}
 
 # ---------------- lever derived in-kernel from the two checkpoints ----------------
-spec = build_lever_from_checkpoints(base, edited, layers=(15, 19), validate=True)
+spec, lever_diagnostics = build_lever_from_checkpoints(base, edited)
 levers = [DeltaLever(base.model.layers[L].mlp.down_proj, spec[L][0], spec[L][1],
                      lambda st=switch: st["a"]) for L in (15, 19)]
 log("lever installed on layers", list(spec))
@@ -131,22 +101,15 @@ def prompt_ids(problem):
 # ---------------- 1. a real looping rollout from the BASE model ----------------
 problem = pairs[0]
 switch["a"] = 0.0
-enc = prompt_ids(problem["problem"])
-log(f"prompt: {enc.shape[1]} tokens; rolling out {ROLLOUT} tokens")
-t_start = time.time()
-with torch.no_grad():
-    gen = base.generate(enc, max_new_tokens=ROLLOUT, do_sample=False,
-                        temperature=None, top_p=None, top_k=None,
-                        eos_token_id=[tok.convert_tokens_to_ids("<|im_end|>"),
-                                      tok.eos_token_id],
-                        pad_token_id=tok.eos_token_id)
-rate = ROLLOUT / max(1e-6, time.time() - t_start)
-text = tok.decode(gen[0, enc.shape[1]:], skip_special_tokens=True)
-log(f"rollout done: {gen.shape[1]-enc.shape[1]} tokens at {rate:.2f} tok/s | "
-    f"still-thinking={'</think>' not in text}")
+encoded = prompt_ids(tok, problem["problem"])
+log(f"prompt: {encoded.shape[1]} tokens; rolling out {ROLLOUT}")
+new_tokens, rollout_info = greedy_rollout(base, encoded, ROLLOUT, eos_token_ids(tok))
+rate = rollout_info["n"] / max(1e-6, rollout_info["seconds"])
+log(f"rollout done: {rollout_info['n']} tokens at {rate:.2f} tok/s | "
+    f"still-thinking={not rollout_info['closed']}")
 
-seq = gen[0]                                    # prompt + rollout (the shared token path)
-n_prompt = enc.shape[1]
+seq = torch.cat([encoded[0], new_tokens])        # prompt + rollout (the shared token path)
+n_prompt = encoded.shape[1]
 positions = [n_prompt + int(p) for p in np.linspace(1, gen.shape[1] - n_prompt,
                                                     min(CHECKPOINTS, gen.shape[1] - n_prompt),
                                                     endpoint=False)]
@@ -197,8 +160,9 @@ for alpha in [0.0] + ALPHAS:
         f"last pos {RESULTS[str(alpha)]['last_pos_kl']:.5f} "
         f"({RESULTS[str(alpha)]['arm_seconds']:.0f}s)")
 
-out = dict(status="complete", rollout_tokens=int(gen.shape[1] - n_prompt),
-           tokens_per_second=rate, still_thinking=("</think>" not in text),
+out = dict(status="complete", rollout_tokens=int(new_tokens.shape[0]),
+           tokens_per_second=rate, still_thinking=not rollout_info["closed"],
+           lever=lever_diagnostics,
            positions=positions, prompt_tokens=int(n_prompt), results=RESULTS,
            note="KL(target||arm) at shared positions inside the BASE model's looping "
                 "trajectory; alpha=0 is the control (base model alone)")
