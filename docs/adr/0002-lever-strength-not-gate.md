@@ -174,3 +174,20 @@ alpha = 1 is the most faithful setting, alpha > 1 leaves the fix's trajectory
 immediately but may still break the loop (over-removal of the loop direction), so the
 GPU sweep must measure closed-thinking rate AND capability damage per alpha, not just
 fidelity.
+
+## Third amendment (2026-11-04) — the fidelity horizon is 875 tokens, and the protocol matters
+
+The lever at alpha=1 tracks the weight edit's greedy trajectory for **exactly 875
+tokens**, replicated on two independent machines (Kaggle CPU fp32 at a 1024-token
+horizon, Colab T4 fp32 at a 16,384-token horizon). alpha=1.5 leaves that trajectory
+within 8 tokens on both. So the lever is an *approximate* fix whose error is a rare,
+knife-edge disagreement, not a systematic one.
+
+The un-penalised 16k comparison also produced a false negative worth recording: under a
+harness without the reference protocol's presence penalty of 1.5, **even the authors'
+edited checkpoint did not close its thinking** within 16,384 tokens. The published
+numbers were measured with the penalty on every arm; ours were not, so the
+closed-thinking label from that run is void. The lesson generalises: a behavioural
+metric is only comparable against numbers produced under the same protocol, and
+"our version of the fix also fails" is the first thing to check when a comparison
+disagrees with a published result.

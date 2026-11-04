@@ -38,6 +38,8 @@ block_triton_kernels()
 MODEL_ID = "Qwen/Qwen3.5-0.8B"
 EDITED_ID = "RikiyaT/Qwen3.5-0.8B-weight-space-programming"
 ROLLOUT = int(os.environ.get("ROLLOUT", "16384"))
+# the reference protocol (published work + our stage-2 replication) used 1.5 on every arm
+PRESENCE_PENALTY = float(os.environ.get("PRESENCE_PENALTY", "1.5"))
 ALPHAS = [float(a) for a in os.environ.get("ALPHAS", "1.0 1.5").split()]
 DTYPE = torch.float32                      # the point of this run: no fp16 rounding
 RESULTS_PATH = os.environ.get("RESULTS_PATH", "/content/drive/glia_colab/results.jsonl")
@@ -105,7 +107,8 @@ if "fix_reference" in done:
     log("using the recorded reference rollout")
 else:
     log("arm fix_reference: the edited checkpoint's own rollout")
-    tokens, info = greedy_rollout(edited, encoded, ROLLOUT, stop_ids, tokenizer=tok)
+    tokens, info = greedy_rollout(edited, encoded, ROLLOUT, stop_ids, tokenizer=tok,
+                                  presence_penalty=PRESENCE_PENALTY)
     reference_tokens = tokens
     record("fix_reference", dict(info=info, token_ids=tokens.tolist(),
                                   diagnostics=diagnostics))
@@ -117,7 +120,8 @@ for alpha in ALPHAS:
         continue
     switch["a"] = alpha
     log(f"arm {arm}: base + lever(alpha={alpha})")
-    tokens, info = greedy_rollout(base, encoded, ROLLOUT, stop_ids, tokenizer=tok)
+    tokens, info = greedy_rollout(base, encoded, ROLLOUT, stop_ids, tokenizer=tok,
+                                  presence_penalty=PRESENCE_PENALTY)
     matched = None
     limit = min(len(tokens), len(reference_tokens))
     for index in range(limit):

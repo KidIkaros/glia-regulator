@@ -131,3 +131,34 @@ the fix seven times over. Fixed by running the checkpoint delta at α=1.)*
   elsewhere), (iii) knockout (α = 0 → the loop returns), (iv) capability KL.
 - Pre-registered success band (unchanged from the original Stage A): closed-thinking
   ≥ 70% and knockout closed rate ≤ 25%.
+
+## 6. The runtime lever's fidelity horizon: exactly 875 tokens (replicated twice)
+
+Measured on two independent machines, both fp32, both greedy, both on `gsm8k_train_0`,
+comparing base+lever(alpha) against the authors' edited checkpoint token-for-token:
+
+| platform | alpha=1 | alpha=1.5 |
+|---|---|---|
+| Kaggle CPU kernel (4 threads, fp32, 1024-token rollouts) | **875** | 8 |
+| Colab T4 (fp32, 16,384-token rollouts) | **875** | 8 |
+
+The same divergence point to the token on different hardware, in different dtypes'
+neighbourhood, at two different horizon lengths: the lever at alpha=1 *is* the fix for
+875 tokens, and over-correcting (alpha=1.5) leaves the fix's trajectory within 8 tokens.
+
+### The protocol catch (why the first Colab run's closed-thinking column was void)
+
+The first Colab run ran the arms **without the presence penalty**. The reference
+protocol - the published work and our own stage-2 replication - applied a presence
+penalty of 1.5 to *every* arm, base and fixed alike. Under the un-penalised harness
+even the authors' edited checkpoint did not close its thinking within 16,384 tokens
+(50,682 characters, `closed=False`), which is inconsistent with our stage-2 result
+(our static edit closed this same problem after 4,555 characters *under the penalised
+protocol*). So an arm run without the penalty is not protocol-matched, and its
+closed-thinking label cannot be compared with the published numbers. The harness now
+implements the penalty (`harness.PresencePenalty`) and it is threaded through every arm.
+
+This is worth stating plainly: two of the numbers that look like findings in the
+un-penalised run (the fix "not closing", the lever "not closing") are protocol
+artefacts, not results. The fidelity numbers (875, 8) are unaffected - both arms
+receive the same treatment - and they are the ones that replicate.

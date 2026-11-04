@@ -58,10 +58,12 @@ print("cuda:", torch.cuda.is_available(),
 if not torch.cuda.is_available():
     raise SystemExit("no GPU in this session")
 
-RESULTS_DIR = "/content/glia_out"
+RESULTS_DIR = os.environ.get("RESULTS_DIR", "/content/glia_out")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 os.environ["RESULTS_DIR"] = RESULTS_DIR
-os.environ["RESULTS_PATH"] = os.path.join(RESULTS_DIR, "results.jsonl")
+# setdefault, not assignment: an explicit RESULTS_PATH (from --env) must win, or a
+# resumed run keeps re-reading the previous results file
+os.environ.setdefault("RESULTS_PATH", os.path.join(RESULTS_DIR, "results.jsonl"))
 os.environ.setdefault("ROLLOUT", "16384")
 os.environ.setdefault("ALPHAS", "1.0 1.5")
 print("results ->", os.environ["RESULTS_PATH"], flush=True)

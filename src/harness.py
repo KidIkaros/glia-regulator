@@ -72,7 +72,30 @@ def prompt_ids(tokenizer, problem, instruction=MATH_INSTR):
     return tokenizer(text, return_tensors="pt").input_ids
 
 
-def greedy_rollout(model, encoded, max_new_tokens, stop_ids, tokenizer=None):
+class PresencePenalty:
+    """OpenAI-style presence penalty: subtract `penalty` once per token already emitted.
+
+    The reference protocol for this project (the published weight-space work and our own
+    stage-2 replication) applied a presence penalty of 1.5 to EVERY arm, base and fixed
+    alike. An arm run without it is not protocol-matched, and the closed-thinking label
+    cannot be compared against the published numbers.
+    """
+
+    def __init__(self, penalty: float):
+        self.penalty = penalty
+        self.seen = set()
+
+    def __call__(self, input_ids, scores):
+        import torch
+        if self.penalty <= 0 or not self.seen:
+            return scores
+        for token in self.seen:
+            scores[:, token] -= self.penalty
+        return scores
+
+
+def greedy_rollout(model, encoded, max_new_tokens, stop_ids, tokenizer=None,
+                    presence_penalty=0.0):
     """Greedy generation; returns (new_token_ids, info).
 
     `info` carries the observable behaviour: how many tokens were produced, whether the
@@ -81,10 +104,13 @@ def greedy_rollout(model, encoded, max_new_tokens, stop_ids, tokenizer=None):
     import time
 
     started = time.time()
+    kwargs = dict(max_new_tokens=max_new_tokens, do_sample=False, temperature=None,
+                  top_p=None, top_k=None, eos_token_id=stop_ids, pad_token_id=stop_ids[-1])
+    if presence_penalty and presence_penalty > 0:
+        processor = PresencePenalty(presence_penalty)
+        kwargs["logits_processor"] = [processor]
     with torch.no_grad():
-        output = model.generate(encoded, max_new_tokens=max_new_tokens, do_sample=False,
-                                temperature=None, top_p=None, top_k=None,
-                                eos_token_id=stop_ids, pad_token_id=stop_ids[-1])
+        output = model.generate(encoded, **kwargs)
     new_tokens = output[0, encoded.shape[1]:]
     if tokenizer is None:
         raise ValueError("greedy_rollout needs the tokenizer: the decoded text carries "
