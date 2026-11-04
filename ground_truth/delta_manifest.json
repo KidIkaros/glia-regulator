@@ -1,0 +1,20 @@
+{
+ "census": [
+  {
+   "name": "model.language_model.layers.19.mlp.down_proj.weight",
+   "n_changed": 64928,
+   "numel": 3670016,
+   "max_abs_diff": 0.21484375,
+   "rms_diff": 0.0007301468285731971
+  },
+  {
+   "name": "model.language_model.layers.15.mlp.down_proj.weight",
+   "n_changed": 65260,
+   "numel": 3670016,
+   "max_abs_diff": 0.1463623046875,
+   "rms_diff": 0.0009129099198617041
+  }
+ ],
+ "base_dir": "base-hub-current",
+ "edited_dir": "edited-authors"
+}

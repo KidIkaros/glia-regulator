@@ -1,3 +1,4 @@
 .stageAlog*.txt
 *.log
 kernel*/__pycache__/
+models/
