@@ -88,8 +88,31 @@ Verification status at the time of writing:
 
 | check | result |
 |---|---|
-| logit equivalence, α=1 vs the authors' edited checkpoint | running (`glia-lever-arms`) |
-| behavioural comparison, base vs "ours" lever vs "checkpoint" lever, 3 problems | running |
+| logit equivalence, checkpoint lever at α=1 vs the authors' edited checkpoint | **max 0.164 (fp16 noise), argmax agrees** on both prompts |
+| our own 64+64 neurons vs the authors' edited columns | 62/64 (L15), 63/64 (L19) — a lever rebuilt over ours matches the checkpoint lever's effect (KLs to 3 digits) |
+| KL at the prompt / inside a looping continuation | 0.009–0.022 / 0.03 (the lever has real authority) |
+| closed-thinking at α=1, 16k cap, problem 0 | **did not close**, while the static edit closed at 4,555 chars |
+
+### The finding that matters most: one-step equivalence is not horizon equivalence
+
+The lever is algebraically equivalent to the weight edit and provably logit-equivalent
+(max |Δlogits| = 0.164), yet over a 16k-token generation it does **not** reproduce the
+edit's behaviour. Cause: the edited checkpoint computes `act @ W_editedᵀ` (one fp16
+matmul) while the lever computes `(act @ W_baseᵀ) + (act @ Dᵀ)` (two matmuls and an
+add). The paths differ at ~1e-3 relative; over thousands of steps that compounds and the
+reasoning loop is chaotic, so the perturbed trajectory falls into the attractor and the
+unperturbed one does not.
+
+Two further corrections were needed to get here, both found without spending quota:
+
+- `proj_L*.npy` is stored **negated** (`corr(live W·d̂, proj) = −1.000000` exactly), so
+  the delta built as `−6·proj·d̂` was the **anti-fix** — visible in the behaviour (that
+  arm looped *longer* than base: 32,731 vs 24,006 chars). `scripts/check_proj.py` now
+  verifies the convention locally.
+- the saved `loopdir/proj` arrays were computed against an **older revision** of the
+  model (the dataset copy, 488 tensors) while the hub's current revision has 321
+  tensors, so the same projection differs by ~8x in magnitude. A lever must be rebuilt
+  against the weights it will run on.
 
 *(Earlier equivalence attempt reported a mismatch of ~10 in max |Δlogits|. Cause: that
 kernel applied α=6 on a delta that already encodes the full 6× edit, i.e. it applied
