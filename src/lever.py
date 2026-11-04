@@ -89,3 +89,47 @@ def extract_edit(base_down, edited_down, k=64, thresh=0.05, max_cols=256):
         changed = np.sort(np.argsort(-norms)[:max_cols])
     idx = np.sort(changed)
     return idx, D[:, idx], norms
+
+
+def build_lever_from_checkpoints(base_model, edited_model, layers=(15, 19),
+                                 validate=True, tol_strength=(4.0, 8.0)):
+    """Derive the lever from a base/edited checkpoint pair, IN the kernel.
+
+    Shipping a precomputed delta as a payload is fragile twice over: it breaks the
+    1 MB kernel-source limit, and it can silently describe a different model revision
+    than the one the kernel downloads. Deriving it here from the checkpoints that are
+    actually in memory removes both problems.
+
+    Returns {layer: (idx, delta)} with delta shaped [out_features, n_columns].
+
+    The validation is the point: the published edit removes ONE direction from a set
+    of columns, so (a) every changed column must be parallel to that direction and
+    (b) the least-squares estimate of the edit strength must be ~6 (negative, because
+    the edit removes the direction). A payload or a revision that does not satisfy
+    both would otherwise produce a meaningless dose-response.
+    """
+    out = {}
+    for L in layers:
+        idx, delta, _ = extract_edit(base_model.model.layers[L].mlp.down_proj,
+                                     edited_model.model.layers[L].mlp.down_proj, k=64)
+        if validate:
+            cols = torch.as_tensor(np.asarray(delta), dtype=torch.float32)
+            d_hat = cols[:, 0] / (cols[:, 0].norm() + 1e-9)
+            unit = cols / (cols.norm(dim=0, keepdim=True) + 1e-9)
+            cos_min = float((unit.T @ d_hat).abs().min())
+            W = base_model.model.layers[L].mlp.down_proj.weight.detach().float().cpu()
+            proj = W[:, idx].T @ d_hat
+            dp = cols.T @ d_hat
+            strength = float((dp @ proj) / (proj @ proj).clamp_min(1e-12))
+            if cos_min <= 0.999:
+                raise AssertionError(
+                    f"L{L}: changed columns are not parallel to one direction "
+                    f"(min cos {cos_min:.6f}) - the edit does not match the payload")
+            if not (tol_strength[0] < abs(strength) < tol_strength[1]):
+                raise AssertionError(
+                    f"L{L}: implied edit strength {strength:.3f} is not ~6 - "
+                    "the checkpoints are not the pair this lever was derived from")
+            print(f"[lever] L{L}: {len(idx)} columns, min cos {cos_min:.6f}, "
+                  f"implied strength {strength:.3f}", flush=True)
+        out[L] = (list(idx), np.asarray(delta, dtype=np.float32))
+    return out

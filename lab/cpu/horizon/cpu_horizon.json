@@ -1,0 +1,385 @@
+{
+ "status": "complete",
+ "rollout_tokens": 256,
+ "tokens_per_second": 4.1439196511190985,
+ "still_thinking": true,
+ "positions": [
+  76,
+  107,
+  139,
+  171,
+  203,
+  235,
+  267,
+  299
+ ],
+ "prompt_tokens": 75,
+ "results": {
+  "0.0": {
+   "rows": [
+    {
+     "pos": 76,
+     "offset": 1,
+     "kl_target_vs_arm": 0.0015392707427963614,
+     "agree_argmax": true,
+     "arm_entropy": 0.06886550784111023,
+     "target_entropy": 0.04293012246489525
+    },
+    {
+     "pos": 107,
+     "offset": 32,
+     "kl_target_vs_arm": 0.03746192902326584,
+     "agree_argmax": true,
+     "arm_entropy": 0.4553365409374237,
+     "target_entropy": 0.6395286917686462
+    },
+    {
+     "pos": 139,
+     "offset": 64,
+     "kl_target_vs_arm": 0.0013902642531320453,
+     "agree_argmax": true,
+     "arm_entropy": 0.31547313928604126,
+     "target_entropy": 0.3547598421573639
+    },
+    {
+     "pos": 171,
+     "offset": 96,
+     "kl_target_vs_arm": 0.06663456559181213,
+     "agree_argmax": true,
+     "arm_entropy": 0.27065789699554443,
+     "target_entropy": 0.5056427717208862
+    },
+    {
+     "pos": 203,
+     "offset": 128,
+     "kl_target_vs_arm": 0.0003010521177202463,
+     "agree_argmax": true,
+     "arm_entropy": 0.07014589011669159,
+     "target_entropy": 0.06919242441654205
+    },
+    {
+     "pos": 235,
+     "offset": 160,
+     "kl_target_vs_arm": 0.006321482360363007,
+     "agree_argmax": true,
+     "arm_entropy": 0.4489893913269043,
+     "target_entropy": 0.5197889804840088
+    },
+    {
+     "pos": 267,
+     "offset": 192,
+     "kl_target_vs_arm": 0.0001403860660502687,
+     "agree_argmax": true,
+     "arm_entropy": 4.1091436287388206e-05,
+     "target_entropy": 0.0007778179133310914
+    },
+    {
+     "pos": 299,
+     "offset": 224,
+     "kl_target_vs_arm": 1.2747585742545198e-06,
+     "agree_argmax": true,
+     "arm_entropy": 0.001082644215784967,
+     "target_entropy": 0.0010497553739696741
+    }
+   ],
+   "mean_kl": 0.01422377811421427,
+   "mean_agree": 1.0,
+   "first_pos_kl": 0.0015392707427963614,
+   "last_pos_kl": 1.2747585742545198e-06,
+   "arm_seconds": 5.406638145446777
+  },
+  "0.5": {
+   "rows": [
+    {
+     "pos": 76,
+     "offset": 1,
+     "kl_target_vs_arm": 0.0003155897429678589,
+     "agree_argmax": true,
+     "arm_entropy": 0.05375272035598755,
+     "target_entropy": 0.04293012246489525
+    },
+    {
+     "pos": 107,
+     "offset": 32,
+     "kl_target_vs_arm": 0.010308831930160522,
+     "agree_argmax": true,
+     "arm_entropy": 0.5433865785598755,
+     "target_entropy": 0.6395286917686462
+    },
+    {
+     "pos": 139,
+     "offset": 64,
+     "kl_target_vs_arm": 0.00027284614043310285,
+     "agree_argmax": true,
+     "arm_entropy": 0.3374316394329071,
+     "target_entropy": 0.3547598421573639
+    },
+    {
+     "pos": 171,
+     "offset": 96,
+     "kl_target_vs_arm": 0.010779938660562038,
+     "agree_argmax": true,
+     "arm_entropy": 0.4072001576423645,
+     "target_entropy": 0.5056427717208862
+    },
+    {
+     "pos": 203,
+     "offset": 128,
+     "kl_target_vs_arm": 8.562830771552399e-05,
+     "agree_argmax": true,
+     "arm_entropy": 0.06903316080570221,
+     "target_entropy": 0.06919242441654205
+    },
+    {
+     "pos": 235,
+     "offset": 160,
+     "kl_target_vs_arm": 0.0016575304325670004,
+     "agree_argmax": true,
+     "arm_entropy": 0.4868156909942627,
+     "target_entropy": 0.5197889804840088
+    },
+    {
+     "pos": 267,
+     "offset": 192,
+     "kl_target_vs_arm": 3.816357275354676e-05,
+     "agree_argmax": true,
+     "arm_entropy": 0.00022076650930102915,
+     "target_entropy": 0.0007778179133310914
+    },
+    {
+     "pos": 299,
+     "offset": 224,
+     "kl_target_vs_arm": 7.108880026862607e-07,
+     "agree_argmax": true,
+     "arm_entropy": 0.0009595161536708474,
+     "target_entropy": 0.0010497553739696741
+    }
+   ],
+   "mean_kl": 0.002932404959395285,
+   "mean_agree": 1.0,
+   "first_pos_kl": 0.0003155897429678589,
+   "last_pos_kl": 7.108880026862607e-07,
+   "arm_seconds": 5.315067291259766
+  },
+  "1.0": {
+   "rows": [
+    {
+     "pos": 76,
+     "offset": 1,
+     "kl_target_vs_arm": 1.268502501261537e-06,
+     "agree_argmax": true,
+     "arm_entropy": 0.04359514266252518,
+     "target_entropy": 0.04293012246489525
+    },
+    {
+     "pos": 107,
+     "offset": 32,
+     "kl_target_vs_arm": 0.0001730329531710595,
+     "agree_argmax": true,
+     "arm_entropy": 0.6278446912765503,
+     "target_entropy": 0.6395286917686462
+    },
+    {
+     "pos": 139,
+     "offset": 64,
+     "kl_target_vs_arm": 2.156723894586321e-06,
+     "agree_argmax": true,
+     "arm_entropy": 0.35308438539505005,
+     "target_entropy": 0.3547598421573639
+    },
+    {
+     "pos": 171,
+     "offset": 96,
+     "kl_target_vs_arm": 4.66289566247724e-06,
+     "agree_argmax": true,
+     "arm_entropy": 0.5070258378982544,
+     "target_entropy": 0.5056427717208862
+    },
+    {
+     "pos": 203,
+     "offset": 128,
+     "kl_target_vs_arm": 7.896579745647614e-08,
+     "agree_argmax": true,
+     "arm_entropy": 0.06929310411214828,
+     "target_entropy": 0.06919242441654205
+    },
+    {
+     "pos": 235,
+     "offset": 160,
+     "kl_target_vs_arm": 1.9964916191383963e-06,
+     "agree_argmax": true,
+     "arm_entropy": 0.518970787525177,
+     "target_entropy": 0.5197889804840088
+    },
+    {
+     "pos": 267,
+     "offset": 192,
+     "kl_target_vs_arm": 1.3212060423484218e-07,
+     "agree_argmax": true,
+     "arm_entropy": 0.0007378256996162236,
+     "target_entropy": 0.0007778179133310914
+    },
+    {
+     "pos": 299,
+     "offset": 224,
+     "kl_target_vs_arm": 1.4676460580176354e-07,
+     "agree_argmax": true,
+     "arm_entropy": 0.0010467242682352662,
+     "target_entropy": 0.0010497553739696741
+    }
+   ],
+   "mean_kl": 2.2934427232002008e-05,
+   "mean_agree": 1.0,
+   "first_pos_kl": 1.268502501261537e-06,
+   "last_pos_kl": 1.4676460580176354e-07,
+   "arm_seconds": 5.36885404586792
+  },
+  "1.5": {
+   "rows": [
+    {
+     "pos": 76,
+     "offset": 1,
+     "kl_target_vs_arm": 9.229632269125432e-05,
+     "agree_argmax": true,
+     "arm_entropy": 0.03820513188838959,
+     "target_entropy": 0.04293012246489525
+    },
+    {
+     "pos": 107,
+     "offset": 32,
+     "kl_target_vs_arm": 0.0051641748286783695,
+     "agree_argmax": true,
+     "arm_entropy": 0.7055409550666809,
+     "target_entropy": 0.6395286917686462
+    },
+    {
+     "pos": 139,
+     "offset": 64,
+     "kl_target_vs_arm": 7.78604662627913e-05,
+     "agree_argmax": true,
+     "arm_entropy": 0.36244985461235046,
+     "target_entropy": 0.3547598421573639
+    },
+    {
+     "pos": 171,
+     "offset": 96,
+     "kl_target_vs_arm": 0.003277705516666174,
+     "agree_argmax": true,
+     "arm_entropy": 0.5624502897262573,
+     "target_entropy": 0.5056427717208862
+    },
+    {
+     "pos": 203,
+     "offset": 128,
+     "kl_target_vs_arm": 0.0001151383767137304,
+     "agree_argmax": true,
+     "arm_entropy": 0.07101817429065704,
+     "target_entropy": 0.06919242441654205
+    },
+    {
+     "pos": 235,
+     "offset": 160,
+     "kl_target_vs_arm": 0.0013895659940317273,
+     "agree_argmax": true,
+     "arm_entropy": 0.5420305728912354,
+     "target_entropy": 0.5197889804840088
+    },
+    {
+     "pos": 267,
+     "offset": 192,
+     "kl_target_vs_arm": 4.438707765075378e-05,
+     "agree_argmax": true,
+     "arm_entropy": 0.0019927513785660267,
+     "target_entropy": 0.0007778179133310914
+    },
+    {
+     "pos": 299,
+     "offset": 224,
+     "kl_target_vs_arm": 1.957108679562225e-06,
+     "agree_argmax": true,
+     "arm_entropy": 0.0012537019792944193,
+     "target_entropy": 0.0010497553739696741
+    }
+   ],
+   "mean_kl": 0.0012703857114217953,
+   "mean_agree": 1.0,
+   "first_pos_kl": 9.229632269125432e-05,
+   "last_pos_kl": 1.957108679562225e-06,
+   "arm_seconds": 5.328986644744873
+  },
+  "2.0": {
+   "rows": [
+    {
+     "pos": 76,
+     "offset": 1,
+     "kl_target_vs_arm": 0.00023695360869169235,
+     "agree_argmax": true,
+     "arm_entropy": 0.036841779947280884,
+     "target_entropy": 0.04293012246489525
+    },
+    {
+     "pos": 107,
+     "offset": 32,
+     "kl_target_vs_arm": 0.02336237207055092,
+     "agree_argmax": true,
+     "arm_entropy": 0.7734450697898865,
+     "target_entropy": 0.6395286917686462
+    },
+    {
+     "pos": 139,
+     "offset": 64,
+     "kl_target_vs_arm": 0.0002301303466083482,
+     "agree_argmax": true,
+     "arm_entropy": 0.36561018228530884,
+     "target_entropy": 0.3547598421573639
+    },
+    {
+     "pos": 171,
+     "offset": 96,
+     "kl_target_vs_arm": 0.005516708362847567,
+     "agree_argmax": true,
+     "arm_entropy": 0.5833457112312317,
+     "target_entropy": 0.5056427717208862
+    },
+    {
+     "pos": 203,
+     "offset": 128,
+     "kl_target_vs_arm": 0.0005826045526191592,
+     "agree_argmax": true,
+     "arm_entropy": 0.07458445429801941,
+     "target_entropy": 0.06919242441654205
+    },
+    {
+     "pos": 235,
+     "offset": 160,
+     "kl_target_vs_arm": 0.00577198201790452,
+     "agree_argmax": true,
+     "arm_entropy": 0.5619966387748718,
+     "target_entropy": 0.5197889804840088
+    },
+    {
+     "pos": 267,
+     "offset": 192,
+     "kl_target_vs_arm": 0.0001692526857368648,
+     "agree_argmax": true,
+     "arm_entropy": 0.0037310763727873564,
+     "target_entropy": 0.0007778179133310914
+    },
+    {
+     "pos": 299,
+     "offset": 224,
+     "kl_target_vs_arm": 7.642856871825643e-06,
+     "agree_argmax": true,
+     "arm_entropy": 0.0014769700355827808,
+     "target_entropy": 0.0010497553739696741
+    }
+   ],
+   "mean_kl": 0.004484705812728862,
+   "mean_agree": 1.0,
+   "first_pos_kl": 0.00023695360869169235,
+   "last_pos_kl": 7.642856871825643e-06,
+   "arm_seconds": 5.452413320541382
+  }
+ },
+ "note": "KL(target||arm) at shared positions inside the BASE model's looping trajectory; alpha=0 is the control (base model alone)"
+}

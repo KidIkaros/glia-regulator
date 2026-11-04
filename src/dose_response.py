@@ -36,10 +36,11 @@ import torch
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
-from lever import DeltaLever
+from lever import DeltaLever, build_lever_from_checkpoints
 
 OUT = os.environ.get("OUT_DIR", "/kaggle/working")
 MODEL_ID = os.environ.get("MODEL_ID", "Qwen/Qwen3.5-0.8B")
+EDITED_ID = os.environ.get("EDITED_ID", "RikiyaT/Qwen3.5-0.8B-weight-space-programming")
 N_PROBLEMS = int(os.environ.get("N_PROBLEMS", "4"))
 MAX_NEW = int(os.environ.get("MAX_NEW", "16384"))
 DEADLINE_S = int(os.environ.get("DEADLINE_S", "5400"))
@@ -64,39 +65,14 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 tok = AutoTokenizer.from_pretrained(MODEL_ID)
 model = AutoModelForCausalLM.from_pretrained(MODEL_ID, dtype=torch.float16).cuda().eval()
+edited = AutoModelForCausalLM.from_pretrained(EDITED_ID, dtype=torch.float16).cuda().eval()
 pairs = json.load(open(os.path.join(ROOT, "s1_pairs.json")))["pairs"]
-meta = json.load(open(os.path.join(ROOT, "ground_truth", "delta_idx.json")))
 switch = {"a": 0.0}
 
-# ---------------- validate the payload against the LIVE weights ----------------
-levers = []
-for L in (15, 19):
-    info = meta["layers"][str(L)]
-    delta = np.load(os.path.join(ROOT, "ground_truth", info["delta_file"])).astype(np.float32)
-    idx = [int(i) for i in info["idx"]]
-    assert delta.shape == (1024, len(idx)), f"L{L}: delta shape {delta.shape}"
-    d_hat = torch.as_tensor(info["direction"], dtype=torch.float32)
-    # (a) every changed column is parallel to one direction
-    cols = torch.as_tensor(delta)                                  # [1024, n]
-    unit = cols / (cols.norm(dim=0, keepdim=True) + 1e-9)
-    cos_to_hat = (unit.T @ d_hat).abs()
-    assert float(cos_to_hat.min()) > 0.999, \
-        f"L{L}: changed columns are not parallel to one direction (min cos {float(cos_to_hat.min()):.5f})"
-    # (b) magnitude is 6x the projection onto that direction
-    W = model.model.layers[L].mlp.down_proj.weight.detach().float().cpu()
-    proj = W[:, idx].T @ d_hat                                      # [n]
-    # the edit REMOVES the direction, so the implied strength is negative. Estimate it by
-    # least squares (robust to columns whose projection is near zero, which would make a
-    # per-column ratio explode):  delta_j ~= s * proj_j * d_hat  =>  s = <delta,d>.<proj> / <proj,proj>
-    dp = cols.T @ d_hat                                # [n]
-    strength = float((dp @ proj) / (proj @ proj).clamp_min(1e-12))
-    assert 4.0 < abs(strength) < 8.0, \
-        f"L{L}: implied edit strength {strength:.2f} is not ~6 (signed value; negative = the edit REMOVES the direction)"
-    log(f"L{L}: payload OK - {len(idx)} columns, min cos {float(cos_to_hat.min()):.5f}, "
-        f"implied strength {strength:.2f}, "
-        f"our-neuron overlap {info.get('our_neuron_overlap')}")
-    levers.append(DeltaLever(model.model.layers[L].mlp.down_proj, idx, delta,
-                             lambda st=switch: st["a"]))
+# ---------------- derive the lever in-kernel and validate it ----------------
+spec = build_lever_from_checkpoints(model, edited, layers=(15, 19), validate=True)
+levers = [DeltaLever(model.model.layers[L].mlp.down_proj, spec[L][0], spec[L][1],
+                     lambda st=switch: st["a"]) for L in (15, 19)]
 
 
 def prompt_ids(problem):

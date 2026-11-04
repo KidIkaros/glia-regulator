@@ -111,3 +111,27 @@ Sequence of measurements (each a separate kernel, all in this log):
      is a LONG-HORIZON effect, so only the closed-thinking metric at the full 16k cap
      measures it. Short-cap runs are inconclusive, not negative (our verified static
      edit closed 15/18 at 16384, and gsm8k_train_0 needed >8192 tokens to close).
+
+## 2026-11-03 21:4x — CPU kernels: the horizon-equivalence dose-response (no GPU quota)
+Question: is the runtime lever's scale correct, and how does its effect decay?
+Kernel `glia-cpu-horizon` (CPU, 4 threads, 4.1 tok/s, GPU meter flat before AND after):
+teacher-force the authors' edited checkpoint and base+lever(alpha) on the SAME 256-token
+rolling trajectory from the base model, and compare at 8 positions inside it.
+  alpha 0.0 (base) mean KL(target||arm) = 0.014224   argmax agreement 1.000
+  alpha 0.5                            = 0.002932   1.000
+  alpha 1.0                            = 0.000023   1.000   <- minimum
+  alpha 1.5                            = 0.001270   1.000
+  alpha 2.0                            = 0.004485   1.000
+=> alpha = 1 is the CORRECT scale (U-shaped around it): the lever at alpha=1 tracks the
+   fix's predictions 620x more closely than the base model does, and over-correcting
+   (alpha > 1) makes it worse. So the lever's semantics are right, and the 16k-token
+   behavioural gap is NOT a mis-scaled alpha - it is accumulation.
+   Note the divergence is concentrated at the FIRST positions and decays along the
+   trajectory: deep inside the loop both models sit in the same attractor.
+Blocks found and fixed while building this: Qwen3.5's Triton kernels cannot run on CPU
+(flash-linear-attention must be blocked so transformers takes the pure-torch path); the
+teacher-forcing path needs a [batch, seq] input, not a 1-D token vector; the kernel
+source must stay under 1 MB (so the delta is derived in-kernel from the two checkpoints
+rather than shipped - which also removes the revision-drift risk).
+Next (same CPU budget): `glia-cpu-traj` - free-running greedy rollouts of the edited
+checkpoint vs base+lever(alpha), measuring the first token index where they differ.

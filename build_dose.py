@@ -14,9 +14,6 @@ FILES = {
     "src/lever.py": os.path.join(ROOT, "src", "lever.py"),
     "src/dose_response.py": os.path.join(ROOT, "src", "dose_response.py"),
     "s1_pairs.json": os.path.join(ROOT, "s1_pairs.json"),
-    "ground_truth/delta_L15.npy": os.path.join(ROOT, "ground_truth", "delta_L15.npy"),
-    "ground_truth/delta_L19.npy": os.path.join(ROOT, "ground_truth", "delta_L19.npy"),
-    "ground_truth/delta_idx.json": os.path.join(ROOT, "ground_truth", "delta_idx.json"),
 }
 for name, path in FILES.items():
     assert os.path.exists(path), f"missing payload file {name} -> {path}"

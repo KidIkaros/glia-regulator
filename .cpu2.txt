@@ -1,0 +1,32 @@
+cpu kernel: installing pinned deps
+device: cpu | threads: 4
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[cpu 20s] loading base on CPU
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:01<05:28,  1.03s/it]Loading weights: 100%|██████████| 320/320 [00:01<00:00, 294.11it/s]
+loaded with attn_implementation=eager
+[cpu 49s] loading edited checkpoint on CPU
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:01<06:41,  1.26s/it]Loading weights:  83%|████████▎ | 265/320 [00:01<00:00, 268.76it/s]Loading weights: 100%|██████████| 320/320 [00:01<00:00, 207.70it/s]
+loaded with attn_implementation=eager
+[lever] L15: 62 columns, min cos 0.999969, implied strength -6.002
+[lever] L19: 63 columns, min cos 0.999968, implied strength -6.001
+[cpu 65s] lever installed on layers [15, 19]
+[cpu 65s] prompt: 75 tokens; rolling out 256 tokens
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[cpu 126s] rollout done: 256 tokens at 4.14 tok/s | still-thinking=True
+[cpu 126s] checkpoint positions: [76, 107, 139, 171, 203, 235, 267, 299]
+[cpu 132s] target distributions (edited checkpoint) computed
+[cpu 138s] alpha=0.0: mean KL(target||arm) 0.01422 | argmax agree 1.000 | first pos 0.00154 -> last pos 0.00000 (5s)
+[cpu 143s] alpha=0.5: mean KL(target||arm) 0.00293 | argmax agree 1.000 | first pos 0.00032 -> last pos 0.00000 (5s)
+[cpu 148s] alpha=1.0: mean KL(target||arm) 0.00002 | argmax agree 1.000 | first pos 0.00000 -> last pos 0.00000 (5s)
+[cpu 154s] alpha=1.5: mean KL(target||arm) 0.00127 | argmax agree 1.000 | first pos 0.00009 -> last pos 0.00000 (5s)
+[cpu 159s] alpha=2.0: mean KL(target||arm) 0.00448 | argmax agree 1.000 | first pos 0.00024 -> last pos 0.00001 (5s)
+[cpu 159s] SUMMARY {"0.0": {"mean_kl": 0.01422377811421427, "mean_agree": 1.0, "first_pos_kl": 0.0015392707427963614, "last_pos_kl": 1.2747585742545198e-06, "arm_seconds": 5.406638145446777}, "0.5": {"mean_kl": 0.002932404959395285, "mean_agree": 1.0, "first_pos_kl": 0.0003155897429678589, "last_pos_kl": 7.108880026862607e-07, "arm_seconds": 5.315067291259766}, "1.0": {"mean_kl": 2.2934427232002008e-05, "mean_agree": 1.0, "first_pos_kl": 1.268502501261537e-06, "last_pos_kl": 1.4676460580176354e-07, "arm_seconds": 5.36885404586792}, "1.5": {"mean_kl": 0.0012703857114217953, "mean_agree": 1.0, "first_pos_kl": 9.229632269125432e-05, "last_pos_kl": 1.957108679562225e-06, "arm_seconds": 5.328986644744873}, "2.0": {"mean_kl": 0.004484705812728862, "mean_agree": 1.0, "first_pos_kl": 0.00023695360869169235, "last_pos_kl": 7.642856871825643e-06, "arm_seconds": 5.452413320541382}}
+/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\|'
+  cells[i][c] = re.sub('\\\\\|', '|', cell)
+/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\_'
+  text = re.sub(r'_', '\_', text) # Escape underscores in display text
+[NbConvertApp] Converting notebook __script__.ipynb to html
+[NbConvertApp] Writing 1140276 bytes to __results__.html
