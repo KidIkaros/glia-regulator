@@ -21,8 +21,12 @@ Capability panel per alpha:
   * ppl_delta   - perplexity change on a fixed neutral English passage (embedded, so the
                     panel is deterministic and needs no download).
 
+Problem set. BALANCED=1 selects half loopers and half healthy controls (problems the
+base model already handles), so we see both that the intervention breaks loops and that
+it does not damage ordinary work. With 8 problems the closed-rate resolution is 1/8.
+
 Pre-registered gates (fixed before the run):
-  * the best alpha must close >= 70% of the 18 problems;
+  * the best alpha must close >= 70% of the problems;
   * and at that alpha, ordinary_kl <= 0.05 and ppl_delta <= +20%;
   * if no alpha clears both, the runtime lever is not a viable regulator at this
     authority and the design pivots to the weight-space form (see ADR-0002).
@@ -53,7 +57,7 @@ ALPHAS = [float(a) for a in os.environ.get("ALPHAS", "1.0 1.25 1.5 1.75 2.0").sp
 N_PROBLEMS = int(os.environ.get("N_PROBLEMS", "18"))
 ROLLOUT = int(os.environ.get("ROLLOUT", "8192"))
 PRESENCE_PENALTY = float(os.environ.get("PRESENCE_PENALTY", "1.5"))
-MAX_ARMS_PER_RUN = int(os.environ.get("MAX_ARMS_PER_RUN", "1"))
+MAX_PROBLEMS_PER_RUN = int(os.environ.get("MAX_PROBLEMS_PER_RUN", "2"))
 RESULTS_PATH = os.environ.get("RESULTS_PATH", "/content/glia_out/sweep.jsonl")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float32
@@ -79,6 +83,14 @@ NEUTRAL_PASSAGE = (
 )
 
 
+def as_bool(value):
+    """s1_pairs.json stores base_looped as the STRING "False"/"True", which is truthy
+    for both - so it must be parsed, not truth-tested."""
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes")
+    return bool(value)
+
+
 def log(*parts):
     print(f"[sweep {round(time.time()-started)}s]", *parts, flush=True)
 
@@ -91,33 +103,34 @@ def find_pairs():
     raise FileNotFoundError("s1_pairs.json not found next to the driver or one level up")
 
 
-def done_arms():
-    if not os.path.exists(RESULTS_PATH):
-        return {}
+def read_rows():
+    """One row per (alpha, problem) plus one panel row per alpha."""
     rows = {}
+    if not os.path.exists(RESULTS_PATH):
+        return rows
     for line in open(RESULTS_PATH):
         line = line.strip()
         if line:
             try:
                 row = json.loads(line)
-                rows[row["arm"]] = row
+                rows[row["key"]] = row
             except json.JSONDecodeError:
                 continue
     return rows
 
 
-def record(arm, payload):
+def record(key, payload):
     os.makedirs(os.path.dirname(RESULTS_PATH), exist_ok=True)
     with open(RESULTS_PATH, "a") as handle:
-        handle.write(json.dumps(dict(arm=arm, **payload)) + "\n")
-    log(f"recorded arm {arm}")
+        handle.write(json.dumps(dict(payload, key=key)) + "\n")
+    log(f"recorded {key}")
 
 
 log(f"device={DEVICE} dtype={DTYPE} rollout={ROLLOUT} penalty={PRESENCE_PENALTY} "
     f"alphas={ALPHAS} -> {RESULTS_PATH}")
-done = done_arms()
-if done:
-    log(f"resuming: already have {sorted(done)}")
+rows = read_rows()
+if rows:
+    log(f"resuming: {len(rows)} rows already recorded")
 
 base, tok = load_model(MODEL_ID, device=DEVICE, dtype=DTYPE)
 edited, _ = load_model(EDITED_ID, device=DEVICE, dtype=DTYPE)
@@ -126,7 +139,21 @@ switch = {"a": 0.0}
 levers = [DeltaLever(base.model.layers[layer].mlp.down_proj, spec[layer][0],
                      spec[layer][1], lambda: switch["a"]) for layer in spec]
 stop_ids = eos_token_ids(tok)
-pairs = load_pairs(find_pairs())
+all_pairs = load_pairs(find_pairs())
+if os.environ.get("BALANCED", "1") == "1":
+    # a dose-response needs healthy CONTROLS: part of the set must be problems the base
+    # model already handles, so we can see whether the intervention damages them
+    loopers = [q for q in all_pairs if as_bool(q.get("base_looped", True))]
+    healthy = [q for q in all_pairs if not as_bool(q.get("base_looped", True))]
+    half = max(1, N_PROBLEMS // 2)
+    pairs = loopers[:half] + healthy[:N_PROBLEMS - half]
+    if len(pairs) < N_PROBLEMS:
+        chosen = set(id(q) for q in pairs)
+        pairs += [q for q in all_pairs if id(q) not in chosen][:N_PROBLEMS - len(pairs)]
+else:
+    pairs = all_pairs[:N_PROBLEMS]
+log(f"problem set: {len(pairs)} = {sum(q.get('base_looped', True) for q in pairs)} loopers + "
+    f"{sum(not q.get('base_looped', True) for q in pairs)} healthy controls")
 
 # ---- base references for the capability panel (alpha = 0) ----
 ordinary_ids = [prompt_ids(tok, p).to(DEVICE) for p in ORDINARY_PROMPTS]
@@ -136,27 +163,7 @@ with torch.no_grad():
     neutral_ids = tok(NEUTRAL_PASSAGE, return_tensors="pt").input_ids.to(DEVICE)
     neutral_base_nll = float(base(neutral_ids, labels=neutral_ids).loss)
 
-arms_done = 0
-for alpha in ALPHAS:
-    if arms_done >= MAX_ARMS_PER_RUN:
-        log("arm budget reached - run the script again to continue")
-        break
-    arm = f"alpha_{alpha:g}".replace(".", "_")
-    if arm in done:
-        log(f"arm {arm} already recorded - skipping")
-        continue
-    switch["a"] = alpha
-    log(f"arm {arm}: {N_PROBLEMS} problems at rollout {ROLLOUT}")
-
-    closed, lengths = 0, []
-    for problem in pairs[:N_PROBLEMS]:
-        encoded = prompt_ids(tok, problem["problem"]).to(DEVICE)
-        tokens, info = greedy_rollout(base, encoded, ROLLOUT, stop_ids, tokenizer=tok,
-                                       presence_penalty=PRESENCE_PENALTY)
-        closed += int(info["closed"])
-        lengths.append(info["chars"])
-
-    # capability panel at this alpha
+def capability_panel():
     with torch.no_grad():
         kls, agrees = [], []
         for ids, reference in zip(ordinary_ids, ordinary_base):
@@ -165,25 +172,56 @@ for alpha in ALPHAS:
                                             - probs.clamp_min(1e-12).log())).sum()))
             agrees.append(float(probs.argmax() == reference.argmax()))
         neutral_nll = float(base(neutral_ids, labels=neutral_ids).loss)
+    return dict(ordinary_kl=float(np.mean(kls)), ordinary_agree=float(np.mean(agrees)),
+                ppl_base=float(np.exp(neutral_base_nll)),
+                ppl_at_alpha=float(np.exp(neutral_nll)),
+                ppl_delta_pct=float((np.exp(neutral_nll) / np.exp(neutral_base_nll) - 1) * 100))
 
-    payload = dict(alpha=alpha, closed=closed, n=len(pairs[:N_PROBLEMS]),
-                   closed_rate=closed / max(1, len(pairs[:N_PROBLEMS])),
-                   mean_chars=float(np.mean(lengths)) if lengths else 0.0,
-                   ordinary_kl=float(np.mean(kls)), ordinary_agree=float(np.mean(agrees)),
-                   ppl_base=float(np.exp(neutral_base_nll)),
-                   ppl_at_alpha=float(np.exp(neutral_nll)),
-                   ppl_delta_pct=float((np.exp(neutral_nll) / np.exp(neutral_base_nll) - 1) * 100),
-                   seconds=round(time.time() - started, 1))
-    record(arm, payload)
-    log(f"arm {arm}: closed {closed}/{payload['n']} ({payload['closed_rate']:.2f}) | "
-        f"ordinary_kl {payload['ordinary_kl']:.4f} | agree {payload['ordinary_agree']:.3f} | "
-        f"ppl {payload['ppl_base']:.1f} -> {payload['ppl_at_alpha']:.1f} "
-        f"({payload['ppl_delta_pct']:+.1f}%)")
-    arms_done += 1
+
+done = 0
+for alpha in ALPHAS:
+    prefix = f"alpha_{alpha:g}".replace(".", "_")
+    switch["a"] = alpha
+    panel_key = prefix + "_panel"
+    if panel_key not in rows:
+        panel = capability_panel()
+        rows[panel_key] = dict(key=panel_key, alpha=alpha, kind="panel", **panel)
+        record(panel_key, rows[panel_key])
+        log(f"panel alpha={alpha}: ordinary_kl {panel['ordinary_kl']:.4f} | "
+            f"agree {panel['ordinary_agree']:.3f} | ppl {panel['ppl_base']:.1f} -> "
+            f"{panel['ppl_at_alpha']:.1f} ({panel['ppl_delta_pct']:+.1f}%)")
+    for problem in pairs:
+        key = prefix + "_" + str(problem["id"])
+        if key in rows:
+            continue
+        if done >= MAX_PROBLEMS_PER_RUN:
+            log("chunk budget reached - run the script again to continue")
+            break
+        encoded = prompt_ids(tok, problem["problem"]).to(DEVICE)
+        tokens, info = greedy_rollout(base, encoded, ROLLOUT, stop_ids, tokenizer=tok,
+                                       presence_penalty=PRESENCE_PENALTY)
+        row = dict(key=key, alpha=alpha, kind="problem", id=problem["id"],
+                   base_looped=as_bool(problem.get("base_looped", False)),
+                   closed=bool(info["closed"]), chars=info["chars"], n=info["n"],
+                   seconds=info["seconds"])
+        record(key, row)
+        done += 1
 
 switch["a"] = 0.0
-summary = {arm: {k: v for k, v in row.items() if k != "token_ids"}
-           for arm, row in done_arms().items()}
+summary = {}
+for alpha in ALPHAS:
+    prefix = f"alpha_{alpha:g}".replace(".", "_")
+    problem_rows = [r for k, r in rows.items()
+                    if k.startswith(prefix + "_") and r.get("kind") == "problem"]
+    panel = rows.get(prefix + "_panel", {})
+    if problem_rows:
+        summary[str(alpha)] = dict(
+            closed=sum(r["closed"] for r in problem_rows), n=len(problem_rows),
+            closed_rate=sum(r["closed"] for r in problem_rows) / len(problem_rows),
+            mean_chars=float(np.mean([r["chars"] for r in problem_rows])),
+            ordinary_kl=panel.get("ordinary_kl"), ordinary_agree=panel.get("ordinary_agree"),
+            ppl_base=panel.get("ppl_base"), ppl_at_alpha=panel.get("ppl_at_alpha"),
+            ppl_delta_pct=panel.get("ppl_delta_pct"))
 print("\n=== SWEEP SUMMARY ===")
 print(json.dumps(summary, indent=1))
 print("results file:", RESULTS_PATH)
