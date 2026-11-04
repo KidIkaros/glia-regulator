@@ -9,12 +9,17 @@ The cause is arithmetic, not algebra: two fp16 matmuls plus an add versus one ma
 the reasoning loop is chaotic over thousands of steps. So alpha = 1 is NOT "the fix" --
 the lever's own behaviour must be measured before alpha(t) can be calibrated to it.
 
-Task 8.1 — dose-response (GPU, ~30 min, 1 session)
-  For alpha in {0, 0.5, 1.0, 1.5, 2.0}: generate on 4 paired problems at the full 16384
-  cap with the checkpoint lever and record closed-thinking rate + generation length.
-  Cost estimate: base-equivalent arms run to the cap (~13 min/problem on a T4); if the
-  lever closes early, arms are ~2-4 min each. Use the session deadline guard (3300 s)
-  and write results incrementally, so a timeout still yields the arms that finished.
+Task 8.1 — dose-response (READY: `kernel_dose`, id `mauricew/glia-dose-v1`)
+  alphas 0, 0.5, 1.0, 1.5, 2.0 · 4 problems · 16384-token cap · deadline 5400 s.
+  Arms are interleaved BY PROBLEM so a timeout still yields paired curves for the
+  problems that finished; results are written incrementally (dose_response.jsonl).
+  Payload 1.18 MB — no 1.6 GB edited-checkpoint download in the kernel.
+  The payload is validated against the LIVE weights inside the kernel before any
+  generation: the changed columns must be parallel to one direction (min cos > 0.999)
+  and the least-squares estimate of the edit strength must be ~6 (it measures -6.002 /
+  -6.001 locally; negative because the edit REMOVES the direction). If either check
+  fails the kernel exits rather than producing a meaningless curve.
+  Locally re-verified with scripts/validate_delta.py (CPU, no quota): all checks PASS.
   PASS CONDITION: at least one alpha in {0.5, 1.0, 1.5, 2.0} closes >= 3/4 problems.
   If none does, the runtime lever is not a viable fix path and the experiment must fall
   back to the weight-space form (patch down_proj.weight in place, which forecloses a
